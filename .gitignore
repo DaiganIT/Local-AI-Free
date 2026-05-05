@@ -34,3 +34,4 @@ dist/
 .agents/
 .claude/
 .cursor/
+skills-lock.json
