@@ -1,0 +1,34 @@
+services:
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # Dev override: run with tsx for hot-reload without a build step
+    # Comment out the following two lines when building for production
+    image: node:20-slim
+    command: npx tsx watch src/index.ts
+
+    working_dir: /app
+    volumes:
+      - .:/app
+      - /app/node_modules
+
+    ports:
+      - "3000:3000"
+
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+
+    # ── GCP e2-micro constraints ─────────────────────────────────────────────
+    # e2-micro: 1 GB RAM, shared 0.25 vCPU (burstable)
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 1g
+        reservations:
+          cpus: "0.05"
+          memory: 128m
+
+    restart: unless-stopped

@@ -1,0 +1,155 @@
+@import 'tailwindcss';
+@import 'tailwindcss/preflight' layer(base);
+
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@theme {
+  --color-discord-bg: hsl(208 25% 8%);
+  --color-discord-surface: hsl(208 25% 11%);
+  --color-discord-surface-hover: hsl(208 25% 14%);
+  --color-discord-surface-active: hsl(208 25% 16%);
+  --color-discord-elevated: hsl(208 25% 16%);
+  --color-discord-border: hsl(208 25% 18%);
+  --color-discord-border-subtle: hsl(208 25% 14%);
+  --color-discord-primary: hsl(200 85% 55%);
+  --color-discord-primary-hover: hsl(200 85% 60%);
+  --color-discord-green: hsl(153 46% 49%);
+  --color-discord-green-glow: hsl(153 46% 49% / 0.4);
+  --color-discord-yellow: hsl(38 100% 58%);
+  --color-discord-red: hsl(359 82% 59%);
+  --color-discord-text: hsl(210 13% 95%);
+  --color-discord-text-dim: hsl(210 8% 65%);
+  --color-discord-text-muted: hsl(210 6% 40%);
+  --color-discord-input: hsl(208 25% 10%);
+  --color-discord-channel-icon: hsl(210 8% 50%);
+  --color-discord-brand: hsl(235 86% 65%);
+  --font-sans: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  min-height: 100%;
+  height: 100%;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  background-color: var(--color-discord-bg);
+  color: var(--color-discord-text);
+  font-family: var(--font-sans);
+}
+
+/* Custom scrollbar — Discord-style */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(208 25% 20%);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(208 25% 28%);
+}
+
+/* Message input */
+.discord-input {
+  background: var(--color-discord-surface);
+  border: 1px solid var(--color-discord-border);
+  border-radius: 8px;
+  color: var(--color-discord-text);
+  font-size: 0.875rem;
+  padding: 0.6rem 0.85rem;
+  outline: none;
+  transition: border-color 150ms ease;
+}
+.discord-input:focus {
+  border-color: var(--color-discord-primary);
+}
+.discord-input::placeholder {
+  color: var(--color-discord-text-muted);
+}
+
+/* Chat message bubble */
+.msg-user .msg-content {
+  background: hsl(200 50% 15% / 0.4);
+  border: 1px solid hsl(200 50% 25% / 0.25);
+}
+.msg-assistant .msg-content {
+  background: var(--color-discord-surface);
+  border: 1px solid var(--color-discord-border-subtle);
+}
+
+.msg-content {
+  border-radius: 4px 12px 12px 12px;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.85rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.msg-user::before {
+  content: '';
+  position: absolute;
+  left: -6px;
+  bottom: 0;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 0 10px 8px;
+  border-color: transparent transparent hsl(200 50% 15% / 0.4) transparent;
+}
+
+/* Animations */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-up {
+  animation: fade-up 300ms ease forwards;
+}
+
+/* Ping pulse for online status */
+@keyframes ping-slow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 var(--color-discord-green-glow);
+  }
+  50% {
+    box-shadow: 0 0 0 4px hsl(153 46% 49% / 0);
+  }
+}
+.status-ping {
+  animation: ping-slow 2s ease infinite;
+}
+
+/* Streaming cursor blink */
+@keyframes blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+.animate-blink {
+  animation: blink 1s step-end infinite;
+}

@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+.output/
+.nitro/
+.tanstack/
+
+# Environment files
+.env
+*.local
+
+# OS files
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Database
+*.db
+
+# Python (llm-host .venv)
+.venv/
+
+# Logs
+*.log
+
+# Infra
+.wrangler/
+
+# Agent/IDE configs (local only)
+.agents/
+.claude/
+.cursor/
