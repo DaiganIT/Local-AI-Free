@@ -49,7 +49,7 @@ This document contains rules and principles that must be followed when working o
 
 ## Committing
 
-`client/`, `server/`, and `llm-host/` are git submodules. When asked to "commit everything", commit in each of the three subfolders individually (`git add` + `git commit` inside each one), then update the parent repo to point to the new submodule commits.
+This is a monorepo with npm workspaces. All three packages (`client/`, `server/`, `llm-host/`) share a single git history. Commit from the repository root.
 
 ## Workflow
 
