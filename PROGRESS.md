@@ -9,13 +9,13 @@ Convert the project from three separate git repos into a monorepo, fix port conf
 
 | # | Status | Description |
 |---|--------|-------------|
-| **O1** | ⬜ TODO | **Fix port defaults** — Server stays at 3000, client moves to 4000 (dev port), update .env.example files accordingly |
-| **O2** | ⬜ TODO | **Make Ollama a soft requirement** — If Ollama is unreachable on startup, print helpful message with install URL instead of crashing. llm-host stays running, reports 0 models. |
-| **O3** | ⬜ TODO | **Convert to monorepo** — Init root git repo, merge three repo histories, set up npm workspaces, root scripts for install/build/test/dev |
-| **O4** | ⬜ TODO | **Add Polyform Noncommercial LICENSE** |
-| **O5** | ⬜ TODO | **Write README.md** — Project overview, architecture, prerequisites (Ollama), quickstart, dev setup, env vars |
-| **O6** | ⬜ TODO | **Write CONTRIBUTING.md** — Dev setup, how to run tests, PR process |
-| **O7** | ⬜ TODO | **Add root .gitignore, clean up** — Remove pi-readme.md, markitdown-readme.md, empty root package.json/package-lock.json |
+| **O1** | ✅ DONE | **Fix port defaults** — Server stays at 3000, client moves to 4000 (dev port), update .env.example files accordingly |
+| **O2** | ✅ DONE | **Make Ollama a soft requirement** — If Ollama is unreachable on startup, print helpful message with install URL instead of crashing. llm-host stays running, reports 0 models. |
+| **O3** | ✅ DONE | **Convert to monorepo** — Init root git repo, set up npm workspaces, root scripts for install/build/test/dev, removed individual .git repos |
+| **O4** | ✅ DONE | **Add PolyForm Noncommercial LICENSE** |
+| **O5** | ✅ DONE | **Write README.md** — Project overview, architecture, prerequisites (Ollama), quickstart, dev setup, env vars |
+| **O6** | ✅ DONE | **Write CONTRIBUTING.md** — Dev setup, how to run tests, PR process |
+| **O7** | ✅ DONE | **Add root .gitignore, clean up** — Removed pi-readme.md, markitdown-readme.md, empty root package.json. Added root .gitignore with monorepo-aware entries. |
 
 ## 2026-05-05 — Server Refactor: routes.ts Breakdown
 
