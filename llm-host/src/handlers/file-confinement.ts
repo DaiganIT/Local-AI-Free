@@ -8,6 +8,9 @@ export const PROTECTED_FILE_NAMES = new Set(["AGENTS.md"]);
 /** File kinds the artifact viewer knows how to render. */
 export const IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp", ".ico"]);
 
+/** PDF extensions served as base64 data URLs. */
+export const PDF_EXTENSIONS = new Set([".pdf"]);
+
 /** Result of reading a confined file */
 export type ReadConfinedResult =
   | { content: string; kind: "text"; path: string }
@@ -139,12 +142,17 @@ export function readConfinedFile(baseDir: string, filePath: string): ReadConfine
 
   const ext = extname(filePath).toLowerCase();
   const isImage = IMAGE_EXTENSIONS.has(ext);
+  const isPdf = PDF_EXTENSIONS.has(ext);
 
   if (isImage) {
     const buffer = readFileSync(resolvedPath);
     const base64 = buffer.toString("base64");
     const mime = imageMime(ext);
     return { content: `data:${mime};base64,${base64}`, kind: "image", path: filePath };
+  } else if (isPdf) {
+    const buffer = readFileSync(resolvedPath);
+    const base64 = buffer.toString("base64");
+    return { content: `data:application/pdf;base64,${base64}`, kind: "image", path: filePath };
   } else {
     const content = readFileSync(resolvedPath, "utf-8");
     return { content, kind: "text", path: filePath };

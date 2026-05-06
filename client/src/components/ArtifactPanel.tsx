@@ -7,13 +7,14 @@ import { useDeleteAgentFile, useDeleteWorkspaceFile } from '#/hooks/useDeleteFil
 import { MarkdownRenderer } from './renderers/MarkdownRenderer'
 import { CsvRenderer } from './renderers/CsvRenderer'
 import { TextRenderer } from './renderers/TextRenderer'
+import { PdfRenderer } from './renderers/PdfRenderer'
 
 type ArtifactPanelProps =
   | { mode: 'agent'; agentId: string; hostId: string; filePath: string }
   | { mode: 'workspace'; workspaceId: string; hostId: string; filePath: string }
 
 const UNSUPPORTED_EXTENSIONS = new Set([
-  '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
+  '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
   '.zip', '.tar', '.gz', '.bz2', '.7z', '.rar',
   '.exe', '.dll', '.so', '.dylib', '.bin',
 ])
@@ -23,12 +24,13 @@ function fileExtension(path: string): string {
   return dot >= 0 ? path.slice(dot).toLowerCase() : ''
 }
 
-type FileRenderType = 'markdown' | 'csv' | 'text' | 'unsupported'
+type FileRenderType = 'markdown' | 'csv' | 'text' | 'pdf' | 'unsupported'
 
 function detectRenderType(ext: string): FileRenderType {
   if (UNSUPPORTED_EXTENSIONS.has(ext)) return 'unsupported'
   if (ext === '.md') return 'markdown'
   if (ext === '.csv') return 'csv'
+  if (ext === '.pdf') return 'pdf'
   return 'text'
 }
 
@@ -143,7 +145,7 @@ export function ArtifactPanel(props: ArtifactPanelProps) {
           </div>
         )}
 
-        {data?.kind === 'image' && (
+        {data?.kind === 'image' && renderType !== 'pdf' && (
           <div className="flex h-full items-center justify-center p-4">
             <img
               src={data.content}
@@ -151,6 +153,10 @@ export function ArtifactPanel(props: ArtifactPanelProps) {
               className="max-h-full max-w-full rounded-lg border border-discord-border shadow-lg"
             />
           </div>
+        )}
+
+        {data?.kind === 'image' && renderType === 'pdf' && (
+          <PdfRenderer content={data.content} />
         )}
 
         {data?.kind === 'text' && renderType === 'unsupported' && (
