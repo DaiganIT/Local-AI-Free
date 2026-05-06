@@ -41,10 +41,16 @@ export function MessageBubble({ msg, isLast, isLoading }: MessageBubbleProps) {
             <div
               className={`msg-content msg-user relative ${isLoading ? 'opacity-60' : ''}`}
             >
-              {msg.content}
-              {msg.attachments && msg.attachments.length > 0 && (
-                <MessageAttachments attachments={msg.attachments} />
-              )}
+              <UserMessageContent content={msg.content} />
+              {msg.attachments && msg.attachments.length > 0 && (() => {
+                // Attachments whose names appear as @mention in the text are
+                // already rendered inline — exclude them from the chip row.
+                const mentionNames = new Set(
+                  [...msg.content.matchAll(/@(\S+)/g)].map((m) => m[1]),
+                )
+                const uploadOnly = msg.attachments.filter((a) => !mentionNames.has(a.name))
+                return uploadOnly.length > 0 ? <MessageAttachments attachments={uploadOnly} /> : null
+              })()}
             </div>
           )}
           {!isUser && (
@@ -65,6 +71,31 @@ export function MessageBubble({ msg, isLast, isLoading }: MessageBubbleProps) {
   )
 }
 
+
+/**
+ * Renders user message text, turning any `@word` tokens into inline
+ * violet mention chips — matching how they appear in the editor.
+ */
+function UserMessageContent({ content }: { content: string }) {
+  const parts = content.split(/(@\S+)/g)
+  return (
+    <>
+      {parts.map((part, i) =>
+        part.startsWith('@') && part.length > 1 ? (
+          <span
+            key={i}
+            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[0.8em] bg-violet-500/18 border border-violet-500/30 text-violet-300 align-baseline mx-0.5"
+            style={{ background: 'rgba(139,92,246,0.18)', border: '1px solid rgba(139,92,246,0.3)' }}
+          >
+            {part}
+          </span>
+        ) : (
+          part
+        ),
+      )}
+    </>
+  )
+}
 
 function ReasoningBlock({ content }: { content: string }) {
   const [open, setOpen] = useState(false)
