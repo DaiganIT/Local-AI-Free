@@ -139,6 +139,7 @@ export async function handleSendMessage(
         ? promptTokens + completionTokens
         : null;
       const reasoningTokens = result.reasoningTokens ?? undefined;
+      const thinkingContent = result.thinkingContent || undefined;
 
       chatDb.insertMessage({
         chatId,
@@ -149,6 +150,7 @@ export async function handleSendMessage(
         completionTokens: completionTokens ?? undefined,
         totalTokens: totalTokens ?? undefined,
         reasoningTokens,
+        thinkingContent,
       });
     }
 

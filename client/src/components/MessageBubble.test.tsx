@@ -2,6 +2,82 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MessageBubble } from './MessageBubble'
 
+describe('MessageBubble — thinking block', () => {
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = vi.fn()
+  })
+
+  it('renders Thoughts button when msg.thinking is set', () => {
+    const msg = {
+      id: 'msg-1',
+      role: 'assistant' as const,
+      content: 'Here is my answer',
+      timestamp: new Date().toISOString(),
+      thinking: 'I am reasoning carefully...',
+    }
+
+    render(<MessageBubble msg={msg} isLast={false} />)
+
+    expect(screen.getByText('Thoughts')).toBeTruthy()
+  })
+
+  it('does not render Thoughts button when msg.thinking is null', () => {
+    const msg = {
+      id: 'msg-2',
+      role: 'assistant' as const,
+      content: 'Simple answer',
+      timestamp: new Date().toISOString(),
+      thinking: null,
+    }
+
+    render(<MessageBubble msg={msg} isLast={false} />)
+
+    expect(screen.queryByText('Thoughts')).toBeNull()
+  })
+
+  it('does not render Thoughts button when msg.thinking is absent', () => {
+    const msg = {
+      id: 'msg-3',
+      role: 'assistant' as const,
+      content: 'Simple answer',
+      timestamp: new Date().toISOString(),
+    }
+
+    render(<MessageBubble msg={msg} isLast={false} />)
+
+    expect(screen.queryByText('Thoughts')).toBeNull()
+  })
+
+  it('does not render Thoughts button for user messages even if thinking is set', () => {
+    const msg = {
+      id: 'msg-4',
+      role: 'user' as const,
+      content: 'Hello',
+      timestamp: new Date().toISOString(),
+      thinking: 'should not appear',
+    }
+
+    render(<MessageBubble msg={msg} isLast={false} />)
+
+    expect(screen.queryByText('Thoughts')).toBeNull()
+  })
+
+  it('still renders assistant content alongside thinking block', () => {
+    const msg = {
+      id: 'msg-5',
+      role: 'assistant' as const,
+      content: 'Here is my answer',
+      timestamp: new Date().toISOString(),
+      thinking: 'I reasoned about this',
+    }
+
+    render(<MessageBubble msg={msg} isLast={false} />)
+
+    expect(screen.getByText('Thoughts')).toBeTruthy()
+    expect(screen.getByText('Here is my answer')).toBeTruthy()
+  })
+})
+
 describe('MessageBubble — attachment display (F8)', () => {
   beforeEach(() => {
     Element.prototype.scrollIntoView = vi.fn()

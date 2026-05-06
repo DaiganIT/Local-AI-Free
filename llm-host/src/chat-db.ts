@@ -29,6 +29,7 @@ export interface MessageRow {
   completionTokens: number | null;
   totalTokens: number | null;
   reasoningTokens: number | null;
+  thinkingContent: string | null;
   attachments: Attachment[] | null;
   createdAt: string;
 }
@@ -47,6 +48,7 @@ export interface InsertMessageInput {
   completionTokens?: number;
   totalTokens?: number;
   reasoningTokens?: number;
+  thinkingContent?: string;
   attachments?: Attachment[];
 }
 
@@ -89,6 +91,7 @@ interface RawMessage {
   completion_tokens: number | null;
   total_tokens: number | null;
   reasoning_tokens: number | null;
+  thinking_content: string | null;
   attachments: string | null;
   created_at: string;
 }
@@ -119,6 +122,7 @@ function toMessage(raw: RawMessage): MessageRow {
     completionTokens: raw.completion_tokens,
     totalTokens: raw.total_tokens,
     reasoningTokens: raw.reasoning_tokens,
+    thinkingContent: raw.thinking_content,
     attachments: raw.attachments ? JSON.parse(raw.attachments) : null,
     createdAt: raw.created_at,
   };
@@ -154,6 +158,7 @@ const CREATE_MESSAGE_TABLE = `
     completion_tokens   INTEGER,
     total_tokens        INTEGER,
     reasoning_tokens    INTEGER,
+    thinking_content    TEXT,
     attachments         TEXT,
     created_at          TEXT NOT NULL
   );
@@ -188,7 +193,7 @@ export function createChatDatabase(db: Database.Database): ChatDb {
   const deleteChatStmt = db.prepare("DELETE FROM chats WHERE id = ?");
 
   const insertMsgStmt = db.prepare(
-    "INSERT INTO messages (id, chat_id, role, content, model_used, prompt_tokens, completion_tokens, total_tokens, reasoning_tokens, attachments, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    "INSERT INTO messages (id, chat_id, role, content, model_used, prompt_tokens, completion_tokens, total_tokens, reasoning_tokens, thinking_content, attachments, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
   );
   const updateTotalsStmt = db.prepare(
     `UPDATE chats SET
@@ -273,6 +278,7 @@ export function createChatDatabase(db: Database.Database): ChatDb {
       const ct = input.completionTokens ?? null;
       const tt = input.totalTokens ?? null;
       const rt = input.reasoningTokens ?? null;
+      const tc = input.thinkingContent ?? null;
 
       const transaction = db.transaction(() => {
         insertMsgStmt.run(
@@ -285,6 +291,7 @@ export function createChatDatabase(db: Database.Database): ChatDb {
           ct,
           tt,
           rt,
+          tc,
           input.attachments ? JSON.stringify(input.attachments) : null,
           ts
         );

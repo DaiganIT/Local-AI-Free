@@ -317,6 +317,51 @@ describe("runAgent", () => {
     expect(result.completionTokens).toBe(7);
   });
 
+  it("returns thinkingContent concatenating all thinking blocks", async () => {
+    mockAgent.state.messages.push({
+      role: "assistant",
+      content: [
+        { type: "thinking", thinking: "Step one: consider the problem." },
+        { type: "thinking", thinking: " Step two: solve it." },
+        { type: "text", text: "The answer is 42." },
+      ],
+      usage: { input: 10, output: 10, cacheRead: 0, cacheWrite: 0, totalTokens: 20, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } },
+      stopReason: "stop",
+      timestamp: Date.now(),
+    });
+
+    const result = await runAgent({
+      modelId: "qwen3:8b",
+      baseUrl: "http://localhost:11434",
+      systemPrompt: "You are helpful.",
+      prompt: "What is 6*7?",
+      messages: [],
+    });
+
+    expect(result.thinkingContent).toBe("Step one: consider the problem. Step two: solve it.");
+    expect(result.content).toBe("The answer is 42.");
+  });
+
+  it("returns empty thinkingContent when there are no thinking blocks", async () => {
+    mockAgent.state.messages.push({
+      role: "assistant",
+      content: [{ type: "text", text: "Straight answer." }],
+      usage: { input: 5, output: 3, cacheRead: 0, cacheWrite: 0, totalTokens: 8, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } },
+      stopReason: "stop",
+      timestamp: Date.now(),
+    });
+
+    const result = await runAgent({
+      modelId: "qwen3:8b",
+      baseUrl: "http://localhost:11434",
+      systemPrompt: "You are helpful.",
+      prompt: "Hi",
+      messages: [],
+    });
+
+    expect(result.thinkingContent).toBe("");
+  });
+
   it("includes reasoningTokens when agent is aborted with thinking blocks", async () => {
     mockAgent.state.messages.push({
       role: "assistant",

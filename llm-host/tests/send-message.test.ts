@@ -356,6 +356,56 @@ describe("send-message", () => {
     expect(response.data).toMatchObject({ response: "Hi!" });
     expect(response.data.chatId).toBeNull();
   });
+  it("persists thinkingContent on assistant message when chatResponse returns it", async () => {
+    const agent = db.createAgent({ name: "Helper", model: "llama3.2" });
+    const chat = chatDb.createChat({ agentId: agent.id, title: "Thinking test" });
+    chatResponse.mockResolvedValue({
+      content: "The answer is 42.",
+      promptTokens: 10,
+      completionTokens: 8,
+      thinkingContent: "I should consider all possibilities before answering.",
+    });
+
+    await handleRequest({
+      action: "send-message",
+      payload: { agentId: agent.id, prompt: "What is 6*7?", chatId: chat.id },
+      id: "think-1",
+      send: () => {},
+      db,
+      chatDb,
+      chatResponse,
+    });
+
+    const chatResult = chatDb.getChat(chat.id);
+    const assistantMsg = chatResult!.messages[1];
+    expect(assistantMsg.role).toBe("assistant");
+    expect(assistantMsg.thinkingContent).toBe("I should consider all possibilities before answering.");
+  });
+
+  it("persists null thinkingContent when chatResponse returns no thinking", async () => {
+    const agent = db.createAgent({ name: "Helper", model: "llama3.2" });
+    const chat = chatDb.createChat({ agentId: agent.id, title: "No thinking test" });
+    chatResponse.mockResolvedValue({
+      content: "Hi!",
+      promptTokens: 5,
+      completionTokens: 3,
+    });
+
+    await handleRequest({
+      action: "send-message",
+      payload: { agentId: agent.id, prompt: "Hello", chatId: chat.id },
+      id: "think-2",
+      send: () => {},
+      db,
+      chatDb,
+      chatResponse,
+    });
+
+    const chatResult = chatDb.getChat(chat.id);
+    const assistantMsg = chatResult!.messages[1];
+    expect(assistantMsg.thinkingContent).toBeNull();
+  });
+
   it("persists token counts from Ollama response on send-message", async () => {
     const agent = db.createAgent({ name: "Helper", model: "llama3.2" });
     const chat = chatDb.createChat({ agentId: agent.id, title: "Token test" });

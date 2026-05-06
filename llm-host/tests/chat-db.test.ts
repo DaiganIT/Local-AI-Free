@@ -480,6 +480,7 @@ describe("chat-db", () => {
           prompt_tokens       INTEGER,
           completion_tokens   INTEGER,
           total_tokens        INTEGER,
+          thinking_content    TEXT,
           attachments         TEXT,
           created_at          TEXT NOT NULL
         );
@@ -502,6 +503,53 @@ describe("chat-db", () => {
 
       expect(msg.reasoningTokens).toBe(50);
       freshDb.close();
+    });
+  });
+
+  describe("thinkingContent", () => {
+    it("inserts a message with thinkingContent and reads it back", () => {
+      const agent = agentDb.createAgent({ name: "Helper", model: "qwen3:8b" });
+      const chat = chatDb.createChat({ agentId: agent.id, title: "Test" });
+
+      const msg = chatDb.insertMessage({
+        chatId: chat.id,
+        role: "assistant",
+        content: "The answer is 42.",
+        modelUsed: "qwen3:8b",
+        thinkingContent: "Let me work this out step by step...",
+      });
+
+      expect(msg.thinkingContent).toBe("Let me work this out step by step...");
+    });
+
+    it("defaults thinkingContent to null when not provided", () => {
+      const agent = agentDb.createAgent({ name: "Helper", model: "llama3.2" });
+      const chat = chatDb.createChat({ agentId: agent.id, title: "Test" });
+
+      const msg = chatDb.insertMessage({
+        chatId: chat.id,
+        role: "assistant",
+        content: "Hi!",
+        modelUsed: "llama3.2",
+      });
+
+      expect(msg.thinkingContent).toBeNull();
+    });
+
+    it("persists thinkingContent and reads it back via getChat", () => {
+      const agent = agentDb.createAgent({ name: "Helper", model: "qwen3:8b" });
+      const chat = chatDb.createChat({ agentId: agent.id, title: "Test" });
+
+      chatDb.insertMessage({
+        chatId: chat.id,
+        role: "assistant",
+        content: "42.",
+        modelUsed: "qwen3:8b",
+        thinkingContent: "First I consider the problem...",
+      });
+
+      const result = chatDb.getChat(chat.id);
+      expect(result!.messages[0].thinkingContent).toBe("First I consider the problem...");
     });
   });
 

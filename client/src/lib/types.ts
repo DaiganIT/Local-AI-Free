@@ -71,6 +71,7 @@ export interface Message {
   role: 'user' | 'assistant'
   content: string
   timestamp: string
+  thinking?: string | null
   attachments?: Attachment[] | null
 }
 

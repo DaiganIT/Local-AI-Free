@@ -344,6 +344,36 @@ describe("GET /api/chats/:chatId", () => {
     expect(res.body.messages).toHaveLength(1);
   });
 
+  it("passes thinkingContent from host response through to client", async () => {
+    reg.setHosts([
+      {
+        id: "host-1",
+        hostname: "my-pc",
+        connectedAt: "2024-01-01T00:00:00Z",
+        lastHeartbeat: "2024-01-01T00:00:00Z",
+        ollamaVersion: "0.3.5",
+        models: [],
+        status: "online",
+      },
+    ]);
+
+    ar.setHandler(async () => ({
+      chat: { id: "chat-1", title: "Thinking" },
+      messages: [
+        { id: "m1", role: "user", content: "Think!" },
+        { id: "m2", role: "assistant", content: "Here is my answer", thinkingContent: "Let me reason..." },
+      ],
+    }));
+
+    const res = await request(app).get("/api/chats/chat-1");
+
+    expect(res.status).toBe(200);
+    const assistantMsg = (res.body.messages as Array<Record<string, unknown>>).find(
+      (m) => m.role === "assistant"
+    );
+    expect(assistantMsg?.thinkingContent).toBe("Let me reason...");
+  });
+
   it("returns 404 when chat not found on any host (agent not found errors)", async () => {
     reg.setHosts([
       {

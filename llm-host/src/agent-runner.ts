@@ -91,6 +91,8 @@ export interface AgentRunInput {
 export interface AgentRunResult {
   /** Generated response text (concatenated from all text blocks). */
   content: string;
+  /** Concatenated text from all thinking blocks. Empty string if no thinking. */
+  thinkingContent: string;
   /** Prompt tokens consumed. */
   promptTokens: number;
   /** Completion tokens generated (includes reasoning tokens). */
@@ -200,7 +202,7 @@ export async function runAgent(input: AgentRunInput): Promise<AgentRunResult> {
   if (input.signal) {
     if (input.signal.aborted) {
       // Already aborted before we started
-      return { content: "", promptTokens: 0, completionTokens: 0, reasoningTokens: 0, aborted: true };
+      return { content: "", thinkingContent: "", promptTokens: 0, completionTokens: 0, reasoningTokens: 0, aborted: true };
     }
     input.signal.addEventListener("abort", () => {
       agent.abort();
@@ -248,11 +250,13 @@ export async function runAgent(input: AgentRunInput): Promise<AgentRunResult> {
     const textBlocks = lastAssistant.content.filter((b: any) => b.type === "text");
     const thinkingBlocks = lastAssistant.content.filter((b: any) => b.type === "thinking");
     const content = textBlocks.map((b: any) => b.text).join("");
+    const thinkingContent = thinkingBlocks.map((b: any) => b.thinking ?? "").join("");
     const usage = lastAssistant.usage ?? {};
     const reasoningTokens = estimateReasoningTokens(thinkingBlocks, textBlocks, usage.output ?? 0);
     console.log(`[agent-runner] Agent was aborted. Partial content length: ${content.length}`);
     return {
       content,
+      thinkingContent,
       promptTokens: usage.input ?? 0,
       completionTokens: usage.output ?? 0,
       reasoningTokens,
@@ -273,6 +277,7 @@ export async function runAgent(input: AgentRunInput): Promise<AgentRunResult> {
   const thinkingBlocks = lastAssistant.content.filter((b: any) => b.type === "thinking");
   const toolUseBlocks = lastAssistant.content.filter((b: any) => b.type === "tool_use");
   const content = textBlocks.map((b: any) => b.text).join("");
+  const thinkingContent = thinkingBlocks.map((b: any) => b.thinking ?? "").join("");
 
   console.log(`[agent-runner] Done: ${allMessages.length} messages, ${textBlocks.length} text, ${thinkingBlocks.length} thinking, ${toolUseBlocks.length} tool_use`);
 
@@ -285,6 +290,7 @@ export async function runAgent(input: AgentRunInput): Promise<AgentRunResult> {
 
   return {
     content,
+    thinkingContent,
     promptTokens: usage.input ?? 0,
     completionTokens: usage.output ?? 0,
     reasoningTokens,

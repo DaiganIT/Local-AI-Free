@@ -18,7 +18,7 @@ export function useChatDetail(chatId: string) {
       if (!res.ok) throw new Error(`Failed to fetch chat: ${res.status}`)
       const raw = await res.json() as {
         chat: { id: string; agentId: string; title: string; createdAt: string; updatedAt: string; }
-        messages: { id: string; chatId: string; role: string; content: string; createdAt: string; attachments?: Attachment[] | null }[]
+        messages: { id: string; chatId: string; role: string; content: string; createdAt: string; thinkingContent?: string | null; attachments?: Attachment[] | null }[]
         totalIn?: number
         totalOut?: number
         totalReasoning?: number
@@ -40,6 +40,7 @@ export function useChatDetail(chatId: string) {
           role: m.role as 'user' | 'assistant',
           content: m.content,
           timestamp: m.createdAt,
+          thinking: m.thinkingContent ?? null,
           attachments: m.attachments ?? null,
         })),
         totalIn: raw.totalIn,

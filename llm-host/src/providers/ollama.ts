@@ -152,6 +152,7 @@ export function streamSimpleOllama(
         model: model.id,
         messages: buildOllamaMessages(context),
         stream: true,
+        ...(model.reasoning ? { think: true } : {}),
       };
 
       if (context.tools?.length) {

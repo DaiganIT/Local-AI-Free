@@ -338,6 +338,64 @@ describe("chat handlers", () => {
     const response = result[0] as Record<string, unknown>;
     expect(response.data).toMatchObject({ totalReasoning: undefined, totalIn: 61, totalOut: 826 });
   });
+  it("includes thinkingContent in get-chat messages when assistant has thinking", async () => {
+    const agent = db.createAgent({ name: "Helper", model: "qwen3:8b" });
+    const chat = chatDb.createChat({ agentId: agent.id, title: "Thinking test" });
+
+    chatDb.insertMessage({ chatId: chat.id, role: "user", content: "Think deep!", modelUsed: agent.model });
+    chatDb.insertMessage({
+      chatId: chat.id,
+      role: "assistant",
+      content: "Here is my answer",
+      modelUsed: agent.model,
+      thinkingContent: "I am thinking about this carefully...",
+    });
+
+    const result: unknown[] = [];
+    const send = (data: unknown) => result.push(data);
+
+    await handleRequest({
+      action: "get-chat",
+      payload: { chatId: chat.id },
+      id: "think-1",
+      send,
+      db,
+      chatDb,
+    });
+
+    expect(result.length).toBe(1);
+    const response = result[0] as Record<string, unknown>;
+    const messages = (response.data as Record<string, unknown>).messages as Array<Record<string, unknown>>;
+    const assistantMsg = messages.find((m) => m.role === "assistant");
+    expect(assistantMsg?.thinkingContent).toBe("I am thinking about this carefully...");
+  });
+
+  it("returns null thinkingContent in get-chat when message has no thinking", async () => {
+    const agent = db.createAgent({ name: "Helper", model: "llama3.2" });
+    const chat = chatDb.createChat({ agentId: agent.id, title: "No thinking" });
+
+    chatDb.insertMessage({ chatId: chat.id, role: "user", content: "Hello", modelUsed: agent.model });
+    chatDb.insertMessage({ chatId: chat.id, role: "assistant", content: "Hi!", modelUsed: agent.model });
+
+    const result: unknown[] = [];
+    const send = (data: unknown) => result.push(data);
+
+    await handleRequest({
+      action: "get-chat",
+      payload: { chatId: chat.id },
+      id: "think-2",
+      send,
+      db,
+      chatDb,
+    });
+
+    expect(result.length).toBe(1);
+    const response = result[0] as Record<string, unknown>;
+    const messages = (response.data as Record<string, unknown>).messages as Array<Record<string, unknown>>;
+    const assistantMsg = messages.find((m) => m.role === "assistant");
+    expect(assistantMsg?.thinkingContent).toBeNull();
+  });
+
   it("returns undefined contextUsed when chat has no messages", async () => {
     const agent = db.createAgent({ name: "Helper", model: "llama3.2" });
     const chat = chatDb.createChat({ agentId: agent.id, title: "Empty" });

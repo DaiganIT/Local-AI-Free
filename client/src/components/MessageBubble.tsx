@@ -1,7 +1,6 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback } from 'react'
 import { Bot, ChevronDown, ChevronRight, Paperclip } from 'lucide-react'
 import { formatTime } from '../lib/formatting'
-import { parseReasoning } from '../lib/parseReasoning'
 import { MarkdownContent } from './MarkdownContent'
 
 interface MessageBubbleProps {
@@ -10,6 +9,7 @@ interface MessageBubbleProps {
     role: 'user' | 'assistant'
     content: string
     timestamp: string
+    thinking?: string | null
     attachments?: Array<{ name: string; path: string; size: number }> | null
   }
   isLast: boolean
@@ -19,13 +19,7 @@ interface MessageBubbleProps {
 export function MessageBubble({ msg, isLast, isLoading }: MessageBubbleProps) {
   const isUser = msg.role === 'user'
   const time = formatTime(msg.timestamp)
-
-  const segments = useMemo(() => {
-    if (isUser) return null
-    return parseReasoning(msg.content)
-  }, [isUser, msg.content])
-
-  const hasReasoning = segments !== null && segments.some(s => s.type === 'reasoning')
+  const hasThinking = !isUser && !!msg.thinking
 
   return (
     <div
@@ -40,10 +34,10 @@ export function MessageBubble({ msg, isLast, isLoading }: MessageBubbleProps) {
           </div>
         )}
         <div>
-          {!isUser && hasReasoning && segments && (
-            <ReasoningSegments segments={segments} isLoading={isLoading ?? false} />
+          {hasThinking && (
+            <ReasoningBlock content={msg.thinking!} />
           )}
-          {isUser && !hasReasoning && (
+          {isUser && (
             <div
               className={`msg-content msg-user relative ${isLoading ? 'opacity-60' : ''}`}
             >
@@ -53,7 +47,7 @@ export function MessageBubble({ msg, isLast, isLoading }: MessageBubbleProps) {
               )}
             </div>
           )}
-          {!isUser && !hasReasoning && (
+          {!isUser && (
             <div
               className={`msg-content msg-assistant relative ${isLoading ? 'opacity-60' : ''}`}
             >
@@ -71,24 +65,6 @@ export function MessageBubble({ msg, isLast, isLoading }: MessageBubbleProps) {
   )
 }
 
-function ReasoningSegments({ segments, isLoading }: { segments: Array<{ type: 'text' | 'reasoning'; content: string }>; isLoading: boolean }) {
-  return (
-    <>
-      {segments.map((seg, i) => (
-        seg.type === 'reasoning'
-          ? <ReasoningBlock key={i} content={seg.content} />
-          : seg.content
-            ? <div
-                key={i}
-                className={`msg-content msg-assistant relative ${isLoading ? 'opacity-60' : ''}`}
-              >
-                <MarkdownContent content={seg.content} />
-              </div>
-            : null
-      ))}
-    </>
-  )
-}
 
 function ReasoningBlock({ content }: { content: string }) {
   const [open, setOpen] = useState(false)

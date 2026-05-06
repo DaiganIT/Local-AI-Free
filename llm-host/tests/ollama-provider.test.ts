@@ -132,6 +132,46 @@ describe("streamSimpleOllama", () => {
     expect(reqBody.stream).toBe(true);
   });
 
+  it("sends think: true in request body when model.reasoning is true", async () => {
+    const body = {
+      body: makeReadableStream([
+        { message: { role: "assistant", content: "Hi" }, done: false },
+        { message: { role: "assistant", content: "" }, done: true, done_reason: "stop", eval_count: 5, prompt_eval_count: 2 },
+      ]),
+      ok: true,
+    };
+
+    global.fetch = vi.fn().mockResolvedValue(body);
+
+    const model = { ...mockModel(), reasoning: true };
+    const stream = streamSimpleOllama(model, mockContext());
+    for await (const _ of stream) { /* drain */ }
+
+    const [, opts] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const reqBody = JSON.parse((opts as { body: string }).body);
+    expect(reqBody.think).toBe(true);
+  });
+
+  it("omits think from request body when model.reasoning is false", async () => {
+    const body = {
+      body: makeReadableStream([
+        { message: { role: "assistant", content: "Hi" }, done: false },
+        { message: { role: "assistant", content: "" }, done: true, done_reason: "stop", eval_count: 5, prompt_eval_count: 2 },
+      ]),
+      ok: true,
+    };
+
+    global.fetch = vi.fn().mockResolvedValue(body);
+
+    const model = { ...mockModel(), reasoning: false };
+    const stream = streamSimpleOllama(model, mockContext());
+    for await (const _ of stream) { /* drain */ }
+
+    const [, opts] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const reqBody = JSON.parse((opts as { body: string }).body);
+    expect(reqBody.think).toBeUndefined();
+  });
+
   it("emits thinking events for thinking blocks", async () => {
     const body = {
       body: makeReadableStream([
