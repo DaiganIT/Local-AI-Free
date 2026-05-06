@@ -69,6 +69,7 @@ describe("chat-db", () => {
       expect(chat.totalPromptTokens).toBe(0);
       expect(chat.totalCompletionTokens).toBe(0);
       expect(chat.totalTokens).toBe(0);
+      expect(chat.totalReasoningTokens).toBe(0);
     });
 
     it("creates a chat without a title", () => {
@@ -364,6 +365,143 @@ describe("chat-db", () => {
 
       const result = chatDb.getChat(chat.id);
       expect(result!.messages[0].attachments).toEqual(attachments);
+    });
+  });
+
+  describe("reasoningTokens", () => {
+    it("inserts a message with reasoningTokens", () => {
+      const agent = agentDb.createAgent({ name: "Helper", model: "qwen3:8b" });
+      const chat = chatDb.createChat({ agentId: agent.id, title: "Test" });
+
+      const msg = chatDb.insertMessage({
+        chatId: chat.id,
+        role: "assistant",
+        content: "Thinking...",
+        modelUsed: "qwen3:8b",
+        promptTokens: 100,
+        completionTokens: 200,
+        totalTokens: 300,
+        reasoningTokens: 120,
+      });
+
+      expect(msg.reasoningTokens).toBe(120);
+    });
+
+    it("defaults reasoningTokens to null when not provided", () => {
+      const agent = agentDb.createAgent({ name: "Helper", model: "llama3.2" });
+      const chat = chatDb.createChat({ agentId: agent.id, title: "Test" });
+
+      const msg = chatDb.insertMessage({
+        chatId: chat.id,
+        role: "assistant",
+        content: "Hi!",
+        modelUsed: "llama3.2",
+      });
+
+      expect(msg.reasoningTokens).toBeNull();
+    });
+
+    it("updates chat totalReasoningTokens after inserting a message", () => {
+      const agent = agentDb.createAgent({ name: "Helper", model: "qwen3:8b" });
+      const chat = chatDb.createChat({ agentId: agent.id, title: "Test" });
+
+      chatDb.insertMessage({
+        chatId: chat.id,
+        role: "assistant",
+        content: "Thinking...",
+        modelUsed: "qwen3:8b",
+        promptTokens: 100,
+        completionTokens: 200,
+        totalTokens: 300,
+        reasoningTokens: 120,
+      });
+
+      chatDb.insertMessage({
+        chatId: chat.id,
+        role: "assistant",
+        content: "More thinking...",
+        modelUsed: "qwen3:8b",
+        promptTokens: 150,
+        completionTokens: 250,
+        totalTokens: 400,
+        reasoningTokens: 80,
+      });
+
+      const result = chatDb.getChat(chat.id);
+      expect(result!.chat.totalReasoningTokens).toBe(200);
+    });
+
+    it("reads back reasoningTokens from getChat", () => {
+      const agent = agentDb.createAgent({ name: "Helper", model: "qwen3:8b" });
+      const chat = chatDb.createChat({ agentId: agent.id, title: "Test" });
+
+      chatDb.insertMessage({
+        chatId: chat.id,
+        role: "assistant",
+        content: "Thinking...",
+        modelUsed: "qwen3:8b",
+        promptTokens: 100,
+        completionTokens: 200,
+        totalTokens: 300,
+        reasoningTokens: 120,
+      });
+
+      const result = chatDb.getChat(chat.id);
+      expect(result!.messages[0].reasoningTokens).toBe(120);
+    });
+
+    it("adds totalReasoningTokens column to existing DB", () => {
+      // Simulate a DB that already has the messages table but without reasoning_tokens
+      // by dropping the column and re-creating the DB
+      const freshDb = new Database(":memory:");
+      const agentFresh = createDatabase(freshDb);
+
+      // Create chat DB as if it was the old version (no reasoning_tokens)
+      freshDb.exec(`
+        CREATE TABLE IF NOT EXISTS chats (
+          id                      TEXT PRIMARY KEY,
+          agent_id                TEXT NOT NULL,
+          title                   TEXT,
+          created_at              TEXT NOT NULL,
+          updated_at              TEXT NOT NULL,
+          prompt_count            INTEGER NOT NULL DEFAULT 0,
+          total_prompt_tokens     INTEGER NOT NULL DEFAULT 0,
+          total_completion_tokens INTEGER NOT NULL DEFAULT 0,
+          total_tokens            INTEGER NOT NULL DEFAULT 0
+        );
+      `);
+      freshDb.exec(`
+        CREATE TABLE IF NOT EXISTS messages (
+          id                  TEXT PRIMARY KEY,
+          chat_id             TEXT NOT NULL,
+          role                TEXT NOT NULL CHECK(role IN ('user', 'assistant', 'system')),
+          content             TEXT NOT NULL CHECK(length(content) > 0),
+          model_used          TEXT NOT NULL CHECK(length(model_used) > 0),
+          prompt_tokens       INTEGER,
+          completion_tokens   INTEGER,
+          total_tokens        INTEGER,
+          attachments         TEXT,
+          created_at          TEXT NOT NULL
+        );
+      `);
+      freshDb.exec(`CREATE INDEX IF NOT EXISTS idx_chats_agent_date ON chats(agent_id, updated_at DESC);`);
+      freshDb.exec(`CREATE INDEX IF NOT EXISTS idx_messages_chat_date ON messages(chat_id, created_at);`);
+
+      // Now create the chat database (should run the migration)
+      const chatFresh = createChatDatabase(freshDb);
+
+      const agent = agentFresh.createAgent({ name: "Helper", model: "qwen3:8b" });
+      const chat = chatFresh.createChat({ agentId: agent.id });
+      const msg = chatFresh.insertMessage({
+        chatId: chat.id,
+        role: "assistant",
+        content: "Testing migration",
+        modelUsed: "qwen3:8b",
+        reasoningTokens: 50,
+      });
+
+      expect(msg.reasoningTokens).toBe(50);
+      freshDb.close();
     });
   });
 

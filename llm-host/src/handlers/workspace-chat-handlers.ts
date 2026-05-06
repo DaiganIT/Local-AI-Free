@@ -213,6 +213,7 @@ export async function handleSendWorkspaceMessage(
         const totalTokens = (promptTokens !== undefined && completionTokens !== undefined)
           ? promptTokens + completionTokens
           : undefined;
+        const reasoningTokens = result.reasoningTokens ?? undefined;
 
         wchatDb.addMessage({
           workspaceChatId,
@@ -223,6 +224,7 @@ export async function handleSendWorkspaceMessage(
           promptTokens,
           completionTokens,
           totalTokens,
+          reasoningTokens,
         });
 
         responses.push({ response: result.content, agentId });

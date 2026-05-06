@@ -83,11 +83,15 @@ export function handleGetChat(
   let contextUsed: number | undefined;
   let totalIn: number | undefined;
   let totalOut: number | undefined;
+  let totalReasoning: number | undefined;
   const lastAssistant = [...result.messages].reverse().find((m) => m.role === "assistant");
   if (lastAssistant?.totalTokens != null) {
     contextUsed = lastAssistant.totalTokens;
     totalIn = lastAssistant.promptTokens ?? 0;
     totalOut = lastAssistant.completionTokens ?? 0;
+  }
+  if (lastAssistant?.reasoningTokens != null) {
+    totalReasoning = lastAssistant.reasoningTokens;
   }
 
   sendResponse(send, id, {
@@ -95,6 +99,7 @@ export function handleGetChat(
     messages: result.messages,
     totalIn: totalIn,
     totalOut: totalOut,
+    totalReasoning,
     contextUsed,
     contextLength,
   });

@@ -244,6 +244,102 @@ describe("runAgent", () => {
 
     expect(result.promptTokens).toBe(0);
     expect(result.completionTokens).toBe(0);
+    expect(result.reasoningTokens).toBe(0);
+  });
+
+  it("calculates reasoningTokens as 0 when there are no thinking blocks", async () => {
+    mockAgent.state.messages.push({
+      role: "assistant",
+      content: [{ type: "text", text: "The answer is 42." }],
+      usage: { input: 10, output: 5, cacheRead: 0, cacheWrite: 0, totalTokens: 15, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } },
+      stopReason: "stop",
+      timestamp: Date.now(),
+    });
+
+    const result = await runAgent({
+      modelId: "qwen3:8b",
+      baseUrl: "http://localhost:11434",
+      systemPrompt: "You are helpful.",
+      prompt: "What is 6*7?",
+      messages: [],
+    });
+
+    expect(result.reasoningTokens).toBe(0);
+    expect(result.completionTokens).toBe(5);
+  });
+
+  it("estimates reasoningTokens proportionally from thinking vs text chars", async () => {
+    // 100 chars thinking, 50 chars text → thinking is 2/3 of total → 66% of 9 tokens ≈ 6
+    mockAgent.state.messages.push({
+      role: "assistant",
+      content: [
+        { type: "thinking", thinking: "A".repeat(100) },
+        { type: "text", text: "B".repeat(50) },
+      ],
+      usage: { input: 20, output: 9, cacheRead: 0, cacheWrite: 0, totalTokens: 29, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } },
+      stopReason: "stop",
+      timestamp: Date.now(),
+    });
+
+    const result = await runAgent({
+      modelId: "qwen3:8b",
+      baseUrl: "http://localhost:11434",
+      systemPrompt: "You are helpful.",
+      prompt: "Think carefully",
+      messages: [],
+    });
+
+    expect(result.reasoningTokens).toBe(6); // round(9 * 100/150)
+    expect(result.completionTokens).toBe(9);
+    expect(result.content).toBe("B".repeat(50));
+  });
+
+  it("returns full completionTokens as reasoningTokens when there is only thinking and no text", async () => {
+    mockAgent.state.messages.push({
+      role: "assistant",
+      content: [
+        { type: "thinking", thinking: "Just thinking..." },
+      ],
+      usage: { input: 10, output: 7, cacheRead: 0, cacheWrite: 0, totalTokens: 17, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } },
+      stopReason: "stop",
+      timestamp: Date.now(),
+    });
+
+    const result = await runAgent({
+      modelId: "qwen3:8b",
+      baseUrl: "http://localhost:11434",
+      systemPrompt: "You are helpful.",
+      prompt: "Think",
+      messages: [],
+    });
+
+    expect(result.reasoningTokens).toBe(7);
+    expect(result.completionTokens).toBe(7);
+  });
+
+  it("includes reasoningTokens when agent is aborted with thinking blocks", async () => {
+    mockAgent.state.messages.push({
+      role: "assistant",
+      content: [
+        { type: "thinking", thinking: "Let me think..." },
+        { type: "text", text: "Partial answer" },
+      ],
+      usage: { input: 10, output: 10, cacheRead: 0, cacheWrite: 0, totalTokens: 20, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } },
+      stopReason: "aborted",
+      timestamp: Date.now(),
+    });
+
+    const result = await runAgent({
+      modelId: "qwen3:8b",
+      baseUrl: "http://localhost:11434",
+      systemPrompt: "You are helpful.",
+      prompt: "Tell me a story",
+      messages: [],
+    });
+
+    expect(result.aborted).toBe(true);
+    expect(result.reasoningTokens).toBeGreaterThan(0);
+    expect(result.completionTokens).toBe(10);
   });
 
   it("uses the contextWindow parameter for model config", async () => {

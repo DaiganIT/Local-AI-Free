@@ -36,6 +36,7 @@ vi.mock('#/hooks', async (importOriginal) => {
         messages: [],
         totalIn: 0,
         totalOut: 0,
+        totalReasoning: undefined,
       },
       isLoading: false,
     }),

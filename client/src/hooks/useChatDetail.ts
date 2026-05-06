@@ -21,6 +21,7 @@ export function useChatDetail(chatId: string) {
         messages: { id: string; chatId: string; role: string; content: string; createdAt: string; attachments?: Attachment[] | null }[]
         totalIn?: number
         totalOut?: number
+        totalReasoning?: number
         contextUsed?: number
         contextLength?: number
       }
@@ -43,6 +44,7 @@ export function useChatDetail(chatId: string) {
         })),
         totalIn: raw.totalIn,
         totalOut: raw.totalOut,
+        totalReasoning: raw.totalReasoning,
         contextUsed: raw.contextUsed,
         contextLength: raw.contextLength,
       }

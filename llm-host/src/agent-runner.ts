@@ -93,10 +93,38 @@ export interface AgentRunResult {
   content: string;
   /** Prompt tokens consumed. */
   promptTokens: number;
-  /** Completion tokens generated. */
+  /** Completion tokens generated (includes reasoning tokens). */
   completionTokens: number;
+  /** Estimated reasoning/thinking tokens. Proportionally split from completionTokens based on thinking vs text character counts. 0 if no thinking content. */
+  reasoningTokens: number;
   /** Whether the run was aborted mid-generation. */
   aborted?: boolean;
+}
+
+/**
+ * Estimate reasoning tokens by proportionally splitting completion tokens
+ * based on thinking vs text character counts.
+ *
+ * Ollama's `eval_count` includes both thinking and output tokens in one number.
+ * We approximate the split: if thinking content is 60% of total output chars,
+ * we estimate 60% of completionTokens were reasoning tokens.
+ *
+ * Returns 0 if there are no thinking blocks.
+ */
+function estimateReasoningTokens(
+  thinkingBlocks: any[],
+  textBlocks: any[],
+  completionTokens: number,
+): number {
+  if (thinkingBlocks.length === 0 || completionTokens === 0) return 0;
+
+  const thinkingChars = thinkingBlocks.reduce((sum: number, b: any) => sum + (b.thinking?.length ?? 0), 0);
+  const textChars = textBlocks.reduce((sum: number, b: any) => sum + (b.text?.length ?? 0), 0);
+  const totalChars = thinkingChars + textChars;
+
+  if (totalChars === 0) return 0;
+
+  return Math.round(completionTokens * (thinkingChars / totalChars));
 }
 
 /**
@@ -172,7 +200,7 @@ export async function runAgent(input: AgentRunInput): Promise<AgentRunResult> {
   if (input.signal) {
     if (input.signal.aborted) {
       // Already aborted before we started
-      return { content: "", promptTokens: 0, completionTokens: 0, aborted: true };
+      return { content: "", promptTokens: 0, completionTokens: 0, reasoningTokens: 0, aborted: true };
     }
     input.signal.addEventListener("abort", () => {
       agent.abort();
@@ -218,13 +246,16 @@ export async function runAgent(input: AgentRunInput): Promise<AgentRunResult> {
   // If the model was aborted, return partial content
   if (lastAssistant.stopReason === "aborted") {
     const textBlocks = lastAssistant.content.filter((b: any) => b.type === "text");
+    const thinkingBlocks = lastAssistant.content.filter((b: any) => b.type === "thinking");
     const content = textBlocks.map((b: any) => b.text).join("");
     const usage = lastAssistant.usage ?? {};
+    const reasoningTokens = estimateReasoningTokens(thinkingBlocks, textBlocks, usage.output ?? 0);
     console.log(`[agent-runner] Agent was aborted. Partial content length: ${content.length}`);
     return {
       content,
       promptTokens: usage.input ?? 0,
       completionTokens: usage.output ?? 0,
+      reasoningTokens,
       aborted: true,
     };
   }
@@ -250,10 +281,12 @@ export async function runAgent(input: AgentRunInput): Promise<AgentRunResult> {
   }
 
   const usage = lastAssistant.usage ?? {};
+  const reasoningTokens = estimateReasoningTokens(thinkingBlocks, textBlocks, usage.output ?? 0);
 
   return {
     content,
     promptTokens: usage.input ?? 0,
     completionTokens: usage.output ?? 0,
+    reasoningTokens,
   };
 }

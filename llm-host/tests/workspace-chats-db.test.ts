@@ -55,6 +55,7 @@ describe("workspace-chats-db", () => {
       expect(chat.totalPromptTokens).toBe(0);
       expect(chat.totalCompletionTokens).toBe(0);
       expect(chat.totalTokens).toBe(0);
+      expect(chat.totalReasoningTokens).toBe(0);
     });
 
     it("creates a workspace chat with a title", () => {
@@ -374,6 +375,94 @@ describe("workspace-chats-db", () => {
 
       const result = wchatDb.getChat(chat.id);
       expect(result!.messages[0].attachments).toEqual(attachments);
+    });
+  });
+
+  describe("reasoningTokens", () => {
+    it("adds a message with reasoningTokens", () => {
+      const ws = wdb.createWorkspace({ name: "Team" });
+      const chat = wchatDb.createChat({ workspaceId: ws.id });
+
+      const msg = wchatDb.addMessage({
+        workspaceChatId: chat.id,
+        senderType: "agent",
+        senderId: "agent-1",
+        content: "Thinking...",
+        modelUsed: "qwen3:8b",
+        promptTokens: 100,
+        completionTokens: 200,
+        totalTokens: 300,
+        reasoningTokens: 120,
+      });
+
+      expect(msg.reasoningTokens).toBe(120);
+    });
+
+    it("defaults reasoningTokens to null when not provided", () => {
+      const ws = wdb.createWorkspace({ name: "Team" });
+      const chat = wchatDb.createChat({ workspaceId: ws.id });
+
+      const msg = wchatDb.addMessage({
+        workspaceChatId: chat.id,
+        senderType: "user",
+        senderId: null,
+        content: "Hello",
+        modelUsed: "",
+      });
+
+      expect(msg.reasoningTokens).toBeNull();
+    });
+
+    it("updates chat totalReasoningTokens after adding a message", () => {
+      const ws = wdb.createWorkspace({ name: "Team" });
+      const chat = wchatDb.createChat({ workspaceId: ws.id });
+
+      wchatDb.addMessage({
+        workspaceChatId: chat.id,
+        senderType: "agent",
+        senderId: "agent-1",
+        content: "Thinking...",
+        modelUsed: "qwen3:8b",
+        promptTokens: 100,
+        completionTokens: 200,
+        totalTokens: 300,
+        reasoningTokens: 120,
+      });
+
+      wchatDb.addMessage({
+        workspaceChatId: chat.id,
+        senderType: "agent",
+        senderId: "agent-2",
+        content: "More thinking...",
+        modelUsed: "qwen3:8b",
+        promptTokens: 150,
+        completionTokens: 250,
+        totalTokens: 400,
+        reasoningTokens: 80,
+      });
+
+      const result = wchatDb.getChat(chat.id);
+      expect(result!.chat.totalReasoningTokens).toBe(200);
+    });
+
+    it("reads back reasoningTokens from getChat", () => {
+      const ws = wdb.createWorkspace({ name: "Team" });
+      const chat = wchatDb.createChat({ workspaceId: ws.id });
+
+      wchatDb.addMessage({
+        workspaceChatId: chat.id,
+        senderType: "agent",
+        senderId: "agent-1",
+        content: "Thinking...",
+        modelUsed: "qwen3:8b",
+        promptTokens: 100,
+        completionTokens: 200,
+        totalTokens: 300,
+        reasoningTokens: 120,
+      });
+
+      const result = wchatDb.getChat(chat.id);
+      expect(result!.messages[0].reasoningTokens).toBe(120);
     });
   });
 

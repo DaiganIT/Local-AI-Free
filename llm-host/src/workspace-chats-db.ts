@@ -16,6 +16,7 @@ export interface WorkspaceChatRow {
   totalPromptTokens: number;
   totalCompletionTokens: number;
   totalTokens: number;
+  totalReasoningTokens: number;
 }
 
 export interface WorkspaceMessageRow {
@@ -29,6 +30,7 @@ export interface WorkspaceMessageRow {
   promptTokens: number | null;
   completionTokens: number | null;
   totalTokens: number | null;
+  reasoningTokens: number | null;
   attachments: Attachment[] | null;
 }
 
@@ -46,6 +48,7 @@ export interface AddMessageInput {
   promptTokens?: number;
   completionTokens?: number;
   totalTokens?: number;
+  reasoningTokens?: number;
   attachments?: Attachment[];
 }
 
@@ -75,6 +78,7 @@ interface RawWorkspaceChat {
   total_prompt_tokens: number;
   total_completion_tokens: number;
   total_tokens: number;
+  total_reasoning_tokens: number;
 }
 
 interface RawWorkspaceMessage {
@@ -88,6 +92,7 @@ interface RawWorkspaceMessage {
   prompt_tokens: number | null;
   completion_tokens: number | null;
   total_tokens: number | null;
+  reasoning_tokens: number | null;
   attachments: string | null;
 }
 
@@ -102,6 +107,7 @@ function toWorkspaceChat(raw: RawWorkspaceChat): WorkspaceChatRow {
     totalPromptTokens: raw.total_prompt_tokens,
     totalCompletionTokens: raw.total_completion_tokens,
     totalTokens: raw.total_tokens,
+    totalReasoningTokens: raw.total_reasoning_tokens,
   };
 }
 
@@ -117,6 +123,7 @@ function toWorkspaceMessage(raw: RawWorkspaceMessage): WorkspaceMessageRow {
     promptTokens: raw.prompt_tokens,
     completionTokens: raw.completion_tokens,
     totalTokens: raw.total_tokens,
+    reasoningTokens: raw.reasoning_tokens,
     attachments: raw.attachments ? JSON.parse(raw.attachments) : null,
   };
 }
@@ -135,7 +142,8 @@ const CREATE_WORKSPACE_CHATS_TABLE = `
     prompt_count            INTEGER NOT NULL DEFAULT 0,
     total_prompt_tokens     INTEGER NOT NULL DEFAULT 0,
     total_completion_tokens INTEGER NOT NULL DEFAULT 0,
-    total_tokens            INTEGER NOT NULL DEFAULT 0
+    total_tokens            INTEGER NOT NULL DEFAULT 0,
+    total_reasoning_tokens INTEGER NOT NULL DEFAULT 0
   );
 `;
 
@@ -151,6 +159,7 @@ const CREATE_WORKSPACE_MESSAGES_TABLE = `
     prompt_tokens       INTEGER,
     completion_tokens   INTEGER,
     total_tokens        INTEGER,
+    reasoning_tokens    INTEGER,
     attachments         TEXT
   );
 `;
@@ -163,6 +172,15 @@ export function createWorkspaceChatsDatabase(db: Database.Database): WorkspaceCh
   db.exec(CREATE_WORKSPACE_MESSAGES_TABLE);
   db.exec(CREATE_WORKSPACE_CHATS_INDEX);
   db.exec(CREATE_WORKSPACE_MESSAGES_INDEX);
+
+  // ── Migrations ─────────────────────────────────────────────────────────
+  try {
+    db.exec("ALTER TABLE workspace_messages ADD COLUMN reasoning_tokens INTEGER");
+  } catch { /* column exists */ }
+
+  try {
+    db.exec("ALTER TABLE workspace_chats ADD COLUMN total_reasoning_tokens INTEGER NOT NULL DEFAULT 0");
+  } catch { /* column exists */ }
 
   // ── Prepared statements ────────────────────────────────────────────────
 
@@ -177,13 +195,14 @@ export function createWorkspaceChatsDatabase(db: Database.Database): WorkspaceCh
   const chatExistsStmt = db.prepare("SELECT 1 FROM workspace_chats WHERE id = ?");
 
   const insertMsgStmt = db.prepare(
-    "INSERT INTO workspace_messages (id, workspace_chat_id, sender_type, sender_id, content, timestamp, model_used, prompt_tokens, completion_tokens, total_tokens, attachments) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    "INSERT INTO workspace_messages (id, workspace_chat_id, sender_type, sender_id, content, timestamp, model_used, prompt_tokens, completion_tokens, total_tokens, reasoning_tokens, attachments) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
   );
   const updateTotalsStmt = db.prepare(
     `UPDATE workspace_chats SET
        total_prompt_tokens = total_prompt_tokens + COALESCE(?, 0),
        total_completion_tokens = total_completion_tokens + COALESCE(?, 0),
        total_tokens = total_tokens + COALESCE(?, 0),
+       total_reasoning_tokens = total_reasoning_tokens + COALESCE(?, 0),
        updated_at = ?
      WHERE id = ?`
   );
@@ -238,6 +257,7 @@ export function createWorkspaceChatsDatabase(db: Database.Database): WorkspaceCh
       const pt = input.promptTokens ?? null;
       const ct = input.completionTokens ?? null;
       const tt = input.totalTokens ?? null;
+      const rt = input.reasoningTokens ?? null;
 
       const transaction = db.transaction(() => {
         insertMsgStmt.run(
@@ -251,9 +271,10 @@ export function createWorkspaceChatsDatabase(db: Database.Database): WorkspaceCh
           pt,
           ct,
           tt,
+          rt,
           input.attachments ? JSON.stringify(input.attachments) : null,
         );
-        updateTotalsStmt.run(pt, ct, tt, ts, input.workspaceChatId);
+        updateTotalsStmt.run(pt, ct, tt, rt, ts, input.workspaceChatId);
         if (input.senderType === "user") {
           incrementPromptStmt.run(input.workspaceChatId);
         }

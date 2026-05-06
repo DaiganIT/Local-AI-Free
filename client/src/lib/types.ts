@@ -51,6 +51,9 @@ export interface Chat {
 export interface ChatDetail {
   chat: Chat
   messages: Message[]
+  totalIn?: number
+  totalOut?: number
+  totalReasoning?: number
   contextUsed?: number
   contextLength?: number
 }

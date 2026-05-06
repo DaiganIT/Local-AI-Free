@@ -290,6 +290,54 @@ describe("chat handlers", () => {
     const response = result[0] as Record<string, unknown>;
     expect(response.data).toMatchObject({ contextUsed: 887, contextLength: 8192 });
   });
+  it("returns totalReasoning in get-chat when last assistant message has reasoningTokens", async () => {
+    const agent = db.createAgent({ name: "Helper", model: "qwen3:8b" });
+    const chat = chatDb.createChat({ agentId: agent.id, title: "Reasoning test" });
+
+    chatDb.insertMessage({ chatId: chat.id, role: "user", content: "Think!", modelUsed: agent.model });
+    chatDb.insertMessage({ chatId: chat.id, role: "assistant", content: "Let me think...", modelUsed: agent.model, promptTokens: 100, completionTokens: 200, totalTokens: 300, reasoningTokens: 120 });
+
+    const result: unknown[] = [];
+    const send = (data: unknown) => result.push(data);
+
+    await handleRequest({
+      action: "get-chat",
+      payload: { chatId: chat.id },
+      id: "reason-1",
+      send,
+      db,
+      chatDb,
+      contextLengthFor: () => 32768,
+    });
+
+    expect(result.length).toBe(1);
+    const response = result[0] as Record<string, unknown>;
+    expect(response.data).toMatchObject({ totalReasoning: 120, totalIn: 100, totalOut: 200 });
+  });
+  it("returns undefined totalReasoning when last assistant message has no reasoningTokens", async () => {
+    const agent = db.createAgent({ name: "Helper", model: "llama3.2" });
+    const chat = chatDb.createChat({ agentId: agent.id, title: "No reasoning" });
+
+    chatDb.insertMessage({ chatId: chat.id, role: "user", content: "Hello", modelUsed: agent.model });
+    chatDb.insertMessage({ chatId: chat.id, role: "assistant", content: "Hi!", modelUsed: agent.model, promptTokens: 61, completionTokens: 826, totalTokens: 887 });
+
+    const result: unknown[] = [];
+    const send = (data: unknown) => result.push(data);
+
+    await handleRequest({
+      action: "get-chat",
+      payload: { chatId: chat.id },
+      id: "reason-2",
+      send,
+      db,
+      chatDb,
+      contextLengthFor: () => 8192,
+    });
+
+    expect(result.length).toBe(1);
+    const response = result[0] as Record<string, unknown>;
+    expect(response.data).toMatchObject({ totalReasoning: undefined, totalIn: 61, totalOut: 826 });
+  });
   it("returns undefined contextUsed when chat has no messages", async () => {
     const agent = db.createAgent({ name: "Helper", model: "llama3.2" });
     const chat = chatDb.createChat({ agentId: agent.id, title: "Empty" });
@@ -351,6 +399,34 @@ describe("chat handlers", () => {
     expect(chatResult!.chat.totalPromptTokens).toBe(102);
     expect(chatResult!.chat.totalCompletionTokens).toBe(20);
     expect(chatResult!.chat.totalTokens).toBe(122);
+  });
+  it("persists reasoningTokens when sending a message", async () => {
+    const agent = db.createAgent({ name: "Helper", model: "qwen3:8b" });
+    const chat = chatDb.createChat({ agentId: agent.id, title: "Reasoning" });
+
+    chatResponse.mockResolvedValueOnce({
+      content: "Let me think...",
+      promptTokens: 100,
+      completionTokens: 200,
+      reasoningTokens: 120,
+    });
+
+    await handleRequest({
+      action: "send-message",
+      payload: { agentId: agent.id, prompt: "Think!", chatId: chat.id },
+      id: "t-reasoning-1",
+      send: () => {},
+      db,
+      chatDb,
+      chatResponse,
+    });
+
+    const chatResult = chatDb.getChat(chat.id);
+    // 2 messages: user + assistant
+    expect(chatResult!.messages).toHaveLength(2);
+    const assistantMsg = chatResult!.messages[1];
+    expect(assistantMsg.reasoningTokens).toBe(120);
+    expect(chatResult!.chat.totalReasoningTokens).toBe(120);
   });
   it("derives chat title from first user message when chat is empty", async () => {
     const agent = db.createAgent({ name: "Helper", model: "llama3.2" });

@@ -266,6 +266,7 @@ export function ChatView({ agentId, chatId, hostId, openFilePath }: ChatViewProp
         <AggregateStatsBar
           tokensIn={chatDetail?.totalIn ?? 0}
           tokensOut={chatDetail?.totalOut ?? 0}
+          tokensReasoning={chatDetail?.totalReasoning}
           contextUsed={chatDetail?.contextUsed}
           contextLength={chatDetail?.contextLength}
         />
@@ -361,11 +362,13 @@ function computeContextPct(contextUsed: number | undefined, contextLength: numbe
 function AggregateStatsBar({
   tokensIn,
   tokensOut,
+  tokensReasoning,
   contextUsed,
   contextLength,
 }: {
   tokensIn: number
   tokensOut: number
+  tokensReasoning?: number
   contextUsed?: number
   contextLength?: number
 }) {
@@ -397,6 +400,17 @@ function AggregateStatsBar({
             {formatTokenCount(tokensOut)}
           </span>
         </div>
+        {tokensReasoning != null && tokensReasoning > 0 && (
+          <>
+            <div className="w-px h-3 bg-[hsl(208_25%_18%)]" />
+            <div className="flex items-center gap-1.5">
+              <span className="text-[hsl(210_8%_55%)]">Reason</span>
+              <span className="font-semibold text-[hsl(210_13%_95%)] tabular-nums">
+                {formatTokenCount(tokensReasoning)}
+              </span>
+            </div>
+          </>
+        )}
         {contextPct !== undefined && (
           <>
             <div className="w-px h-3 bg-[hsl(208_25%_18%)]" />

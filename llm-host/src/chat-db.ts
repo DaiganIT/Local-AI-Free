@@ -16,6 +16,7 @@ export interface ChatRow {
   totalPromptTokens: number;
   totalCompletionTokens: number;
   totalTokens: number;
+  totalReasoningTokens: number;
 }
 
 export interface MessageRow {
@@ -27,6 +28,7 @@ export interface MessageRow {
   promptTokens: number | null;
   completionTokens: number | null;
   totalTokens: number | null;
+  reasoningTokens: number | null;
   attachments: Attachment[] | null;
   createdAt: string;
 }
@@ -44,6 +46,7 @@ export interface InsertMessageInput {
   promptTokens?: number;
   completionTokens?: number;
   totalTokens?: number;
+  reasoningTokens?: number;
   attachments?: Attachment[];
 }
 
@@ -73,6 +76,7 @@ interface RawChat {
   total_prompt_tokens: number;
   total_completion_tokens: number;
   total_tokens: number;
+  total_reasoning_tokens: number;
 }
 
 interface RawMessage {
@@ -84,6 +88,7 @@ interface RawMessage {
   prompt_tokens: number | null;
   completion_tokens: number | null;
   total_tokens: number | null;
+  reasoning_tokens: number | null;
   attachments: string | null;
   created_at: string;
 }
@@ -99,6 +104,7 @@ function toChat(raw: RawChat): ChatRow {
     totalPromptTokens: raw.total_prompt_tokens,
     totalCompletionTokens: raw.total_completion_tokens,
     totalTokens: raw.total_tokens,
+    totalReasoningTokens: raw.total_reasoning_tokens,
   };
 }
 
@@ -112,6 +118,7 @@ function toMessage(raw: RawMessage): MessageRow {
     promptTokens: raw.prompt_tokens,
     completionTokens: raw.completion_tokens,
     totalTokens: raw.total_tokens,
+    reasoningTokens: raw.reasoning_tokens,
     attachments: raw.attachments ? JSON.parse(raw.attachments) : null,
     createdAt: raw.created_at,
   };
@@ -131,7 +138,8 @@ const CREATE_CHAT_TABLE = `
     prompt_count            INTEGER NOT NULL DEFAULT 0,
     total_prompt_tokens     INTEGER NOT NULL DEFAULT 0,
     total_completion_tokens INTEGER NOT NULL DEFAULT 0,
-    total_tokens            INTEGER NOT NULL DEFAULT 0
+    total_tokens            INTEGER NOT NULL DEFAULT 0,
+    total_reasoning_tokens INTEGER NOT NULL DEFAULT 0
   );
 `;
 
@@ -145,6 +153,7 @@ const CREATE_MESSAGE_TABLE = `
     prompt_tokens       INTEGER,
     completion_tokens   INTEGER,
     total_tokens        INTEGER,
+    reasoning_tokens    INTEGER,
     attachments         TEXT,
     created_at          TEXT NOT NULL
   );
@@ -159,6 +168,16 @@ export function createChatDatabase(db: Database.Database): ChatDb {
   db.exec(CREATE_CHAT_INDEX);
   db.exec(CREATE_MESSAGE_INDEX);
 
+  // ── Migrations ─────────────────────────────────────────────────────────
+  // Add reasoning_tokens columns if they don't exist (for upgrades from older schemas)
+  try {
+    db.exec("ALTER TABLE messages ADD COLUMN reasoning_tokens INTEGER");
+  } catch { /* column exists */ }
+
+  try {
+    db.exec("ALTER TABLE chats ADD COLUMN total_reasoning_tokens INTEGER NOT NULL DEFAULT 0");
+  } catch { /* column exists */ }
+
   const insertChatStmt = db.prepare(
     "INSERT INTO chats (id, agent_id, title, created_at, updated_at) VALUES (?, ?, ?, ?, ?)"
   );
@@ -169,13 +188,14 @@ export function createChatDatabase(db: Database.Database): ChatDb {
   const deleteChatStmt = db.prepare("DELETE FROM chats WHERE id = ?");
 
   const insertMsgStmt = db.prepare(
-    "INSERT INTO messages (id, chat_id, role, content, model_used, prompt_tokens, completion_tokens, total_tokens, attachments, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    "INSERT INTO messages (id, chat_id, role, content, model_used, prompt_tokens, completion_tokens, total_tokens, reasoning_tokens, attachments, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
   );
   const updateTotalsStmt = db.prepare(
     `UPDATE chats SET
        total_prompt_tokens = total_prompt_tokens + COALESCE(?, 0),
        total_completion_tokens = total_completion_tokens + COALESCE(?, 0),
        total_tokens = total_tokens + COALESCE(?, 0),
+       total_reasoning_tokens = total_reasoning_tokens + COALESCE(?, 0),
        updated_at = ?
      WHERE id = ?`
   );
@@ -252,6 +272,7 @@ export function createChatDatabase(db: Database.Database): ChatDb {
       const pt = input.promptTokens ?? null;
       const ct = input.completionTokens ?? null;
       const tt = input.totalTokens ?? null;
+      const rt = input.reasoningTokens ?? null;
 
       const transaction = db.transaction(() => {
         insertMsgStmt.run(
@@ -263,10 +284,11 @@ export function createChatDatabase(db: Database.Database): ChatDb {
           pt,
           ct,
           tt,
+          rt,
           input.attachments ? JSON.stringify(input.attachments) : null,
           ts
         );
-        updateTotalsStmt.run(pt, ct, tt, ts, input.chatId);
+        updateTotalsStmt.run(pt, ct, tt, rt, ts, input.chatId);
         // Increment prompt count for user messages
         if (input.role === "user") {
           incrementPromptStmt.run(input.chatId);
