@@ -166,7 +166,11 @@ export function ArtifactPanel(props: ArtifactPanelProps) {
         )}
 
         {data?.kind === 'text' && renderType === 'csv' && (
-          <CsvRenderer content={data.content} />
+          <CsvRenderer
+            content={data.content}
+            onSave={(content) => saveMutation.mutate({ path: filePath, content })}
+            isSaving={saveMutation.isPending}
+          />
         )}
 
         {data?.kind === 'text' && renderType === 'text' && (
