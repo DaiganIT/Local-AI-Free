@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import { Bot, ChevronDown, ChevronRight } from 'lucide-react'
+import { MarkdownContent } from './MarkdownContent'
 
 interface StreamingMessageBubbleProps {
   /** The incremental text content being streamed (grows as deltas arrive). */
@@ -43,14 +44,16 @@ export function StreamingMessageBubble({
             <StreamingThinkingBlock content={thinkingContent} isThinkingStreaming={isThinkingStreaming} />
           )}
           {(content || isStreaming) && (
-            <div className="msg-content msg-assistant relative inline-flex">
-              <span>{content}</span>
-              {isStreaming && (
-                <span
-                  data-streaming-cursor
-                  className="inline-block w-[2px] h-[1em] bg-[hsl(200_85%_55%)] ml-0.5 align-text-bottom animate-blink"
-                />
-              )}
+            <div className="msg-content msg-assistant relative">
+              <MarkdownContent
+                content={content}
+                trailing={isStreaming ? (
+                  <span
+                    data-streaming-cursor
+                    className="inline-block w-[2px] h-[1.1em] bg-[hsl(200_85%_55%)] ml-0.5 -mb-[0.35em] animate-blink"
+                  />
+                ) : undefined}
+              />
             </div>
           )}
         </div>

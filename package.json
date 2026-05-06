@@ -19,6 +19,10 @@
     "test:server": "npm run test --workspace=server",
     "test:host": "npm run test --workspace=llm-host",
     "test:client": "npm run test --workspace=client",
+    "dev": "npm-run-all --parallel dev:server dev:host dev:client",
     "test": "npm run test:server && npm run test:host && npm run test:client"
+  },
+  "devDependencies": {
+    "npm-run-all2": "^8.0.4"
   }
 }

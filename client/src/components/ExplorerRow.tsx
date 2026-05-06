@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import type { NodeRendererProps } from 'react-arborist'
 import { File, Folder, Trash2 } from 'lucide-react'
 import type { AgentFolderNode } from '#/lib/types'
@@ -19,7 +20,15 @@ export function ExplorerRow({ node, style, dragHandle, selectedFilePath, onFileC
   const Icon = isDir ? Folder : File
 
   const [showConfirm, setShowConfirm] = useState(false)
+  const [popoverPos, setPopoverPos] = useState<{ top: number; left: number } | null>(null)
+  const deleteBtnRef = useRef<HTMLButtonElement>(null)
   const confirmRef = useRef<HTMLDivElement>(null)
+
+  const updatePopoverPos = useCallback(() => {
+    if (!deleteBtnRef.current) return
+    const rect = deleteBtnRef.current.getBoundingClientRect()
+    setPopoverPos({ top: rect.bottom + 4, left: rect.right - 160 })
+  }, [])
 
   // Close confirm popover on outside click
   useEffect(() => {
@@ -35,6 +44,7 @@ export function ExplorerRow({ node, style, dragHandle, selectedFilePath, onFileC
 
   function handleDeleteClick(e: React.MouseEvent) {
     e.stopPropagation()
+    updatePopoverPos()
     setShowConfirm(true)
   }
 
@@ -87,6 +97,7 @@ export function ExplorerRow({ node, style, dragHandle, selectedFilePath, onFileC
       {/* Delete button — files only, not for protected files, appears on hover */}
       {!isDir && onDeleteFile && !PROTECTED_FILE_NAMES.has(node.data.name) && (
         <button
+          ref={deleteBtnRef}
           type="button"
           title="Delete file"
           aria-label={`Delete ${node.data.name}`}
@@ -97,11 +108,12 @@ export function ExplorerRow({ node, style, dragHandle, selectedFilePath, onFileC
         </button>
       )}
 
-      {/* Confirmation popover */}
-      {showConfirm && (
+      {/* Confirmation popover — rendered via portal to escape overflow-hidden */}
+      {showConfirm && popoverPos && createPortal(
         <div
           ref={confirmRef}
-          className="absolute right-0 top-full z-50 mt-1 min-w-[160px] rounded-lg border border-discord-border bg-discord-surface p-2 shadow-xl"
+          style={{ top: popoverPos.top, left: popoverPos.left }}
+          className="fixed z-[9999] min-w-[160px] rounded-lg border border-discord-border bg-discord-surface p-2 shadow-xl"
           onClick={(e) => e.stopPropagation()}
         >
           <p className="mb-2 px-1 text-xs text-discord-text">
@@ -123,7 +135,8 @@ export function ExplorerRow({ node, style, dragHandle, selectedFilePath, onFileC
               Delete
             </button>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   )

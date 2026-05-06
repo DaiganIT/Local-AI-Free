@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo } from 'react'
 import { Bot, ChevronDown, ChevronRight, Paperclip } from 'lucide-react'
 import { formatTime } from '../lib/formatting'
 import { parseReasoning } from '../lib/parseReasoning'
+import { MarkdownContent } from './MarkdownContent'
 
 interface MessageBubbleProps {
   msg: {
@@ -56,7 +57,7 @@ export function MessageBubble({ msg, isLast, isLoading }: MessageBubbleProps) {
             <div
               className={`msg-content msg-assistant relative ${isLoading ? 'opacity-60' : ''}`}
             >
-              {msg.content}
+              <MarkdownContent content={msg.content} />
             </div>
           )}
           <div
@@ -81,7 +82,7 @@ function ReasoningSegments({ segments, isLoading }: { segments: Array<{ type: 't
                 key={i}
                 className={`msg-content msg-assistant relative ${isLoading ? 'opacity-60' : ''}`}
               >
-                {seg.content}
+                <MarkdownContent content={seg.content} />
               </div>
             : null
       ))}
