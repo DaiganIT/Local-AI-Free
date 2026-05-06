@@ -1,18 +1,17 @@
 # Progress Log
 
-## Store & Display Thinking Content
+
+## File @-mention in Chat
 
 ### Problem
 
-The thinking content streamed during a model response is displayed live in the `StreamingMessageBubble`, but is never persisted to the database. Once the stream completes, the thinking text is lost — completed messages have no reasoning to show.
-
-The `messages` table only stores `reasoning_tokens` (a count), not the actual thinking text. The client `Message` type has no `thinking` field. `MessageBubble` relies on `parseReasoning(msg.content)` which looks for `<think>` tags that are never present in agent messages.
+Users can attach files via the paperclip button, but there's no quick way to reference an already-uploaded file. Typing `@` in the chat input should open a popover listing the last 5 files from the agent's workspace, filterable by typing, selectable with Enter — attaching the file without re-uploading it.
 
 ### Slices
 
 | # | Status | Description |
 |---|--------|-------------|
-| **TH1** | ✅ DONE | **DB schema: add `thinking_content` column** — Add `thinking_content TEXT` to `messages` `CREATE TABLE`. Update `MessageRow`, `InsertMessageInput`, `RawMessage`, `toMessage`, `insertMsgStmt`, and `insertMessage` in `chat-db.ts`. Tests: insert/read roundtrip with and without thinking content. |
-| **TH2** | ✅ DONE | **Capture thinking text in agent-runner and persist it** — In `agent-runner.ts`, concatenate `thinkingBlocks` text and include `thinkingContent: string` in the return value. In `send-message.ts`, pass it to `chatDb.insertMessage`. Tests: stub LLM response with thinking blocks, verify DB row has thinking text. |
-| **TH3** | ✅ DONE | **Expose thinking text through the API** — `thinkingContent` already flows through `llm-host` `get-chat` response and the server relay. Add `thinking?: string \| null` to client `Message` type; map `thinkingContent` in `useChatDetail`. Tests: llm-host `get-chat` includes `thinkingContent`; server passes it through; `useChatDetail` maps it to `thinking`. |
-| **TH4** | ✅ DONE | **Display thinking in completed `MessageBubble`** — Update `MessageBubble` to use `msg.thinking` directly in `ReasoningBlock` instead of `parseReasoning(msg.content)`. Tests: `MessageBubble` renders `ReasoningBlock` when `msg.thinking` is set; no regression when absent. |
+| **FM1** | ✅ DONE | **`useRecentUploads` hook** — Calls `useAgentFolderTree(agentId)` internally. Flattens all `kind: 'file'` leaf nodes and returns the last 5. No new fetch — shares the existing query cache. Tests: tree with 8 files → 5 returned; only dirs → []; 2 files → 2 returned. |
+| **FM2** | ✅ DONE | **`parseMention` pure function** — `parseMention(value, cursorPos)` returns `{ active, query, triggerStart }`. Scans backward from cursor to find `@` with no whitespace in between. Tests: mid-word query, empty query, space-terminated, no `@`. |
+| **FM3** | ✅ DONE | **`FileMentionPopover` component** — Stateless. Props: `files`, `query`, `selectedIndex`, `onSelect`, `onClose`. Filters by substring match on `name`. Floats above the input. Shows "No recent files" when filter yields nothing. Tests: renders filtered list, highlights selectedIndex, calls onSelect on click. |
+| **FM4** | ✅ DONE | **Wire mention into `ChatView`** — Add `mentionedAttachments` state (separate from `pendingAttachments`, not shown as chips). Track `mentionState` via `parseMention` on every `onChange`. Show popover when active. `↑`/`↓` navigate, `Enter`/click select, `Escape` closes. On select: replace `@query` in input with `@filename` text, push file into `mentionedAttachments`. Merge both lists at send time. Mention chips are not shown — the `@filename` text in the input is the visual indicator. |

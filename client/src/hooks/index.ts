@@ -16,3 +16,4 @@ export { useWorkspaces, useWorkspaceAgents, useCreateWorkspace, useDeleteWorkspa
 export { useWorkspaceChats, useWorkspaceChatDetail, useCreateWorkspaceChat, useSendWorkspaceMessage } from './useWorkspaceChats'
 export { useUploadFile, type UploadFileResponse, type UseUploadFileOptions } from './useUploadFile'
 export { usePendingAttachments, type PendingAttachment, type UsePendingAttachmentsOptions } from './usePendingAttachments'
+export { useRecentUploads, flattenFiles } from './useRecentUploads'

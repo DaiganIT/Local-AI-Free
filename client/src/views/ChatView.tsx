@@ -12,6 +12,8 @@ import { AgentWorkspaceExplorer } from '#/components/AgentWorkspaceExplorer'
 import { useDeleteAgentFile } from '#/hooks/useDeleteFile'
 import { ArtifactPanel } from '#/components/ArtifactPanel'
 import { AttachmentChips } from '#/components/AttachmentChips'
+import { MentionInput } from '#/components/MentionInput'
+import type { MentionInputHandle } from '#/components/MentionInput'
 
 interface ChatViewProps {
   agentId: string
@@ -28,11 +30,12 @@ export function ChatView({ agentId, chatId, hostId, openFilePath }: ChatViewProp
   const deleteFile = useDeleteAgentFile(agentId)
   const queryClient = useQueryClient()
   const navigate = useNavigate()
-  const [input, setInput] = useState('')
   const [localMsgs, setLocalMsgs] = useState<Message[]>([])
+  const [hasInputText, setHasInputText] = useState(false)
+  const [isDragOver, setIsDragOver] = useState(false)
+  const mentionInputRef = useRef<MentionInputHandle>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [isDragOver, setIsDragOver] = useState(false)
   const {
     attachments,
     addFiles,
@@ -40,6 +43,7 @@ export function ChatView({ agentId, chatId, hostId, openFilePath }: ChatViewProp
     clearAttachments,
     isUploading,
   } = usePendingAttachments({ agentId })
+
   const {
     streamingText,
     streamingThinking,
@@ -115,14 +119,24 @@ export function ChatView({ agentId, chatId, hostId, openFilePath }: ChatViewProp
     : localMsgs
 
   const handleSend = () => {
-    const text = input.trim()
-    if (!text || !agentId || isStreaming || isUploading) return
-    setInput('')
+    const text = mentionInputRef.current?.getText().trim() ?? ''
+    const mentions = mentionInputRef.current?.getMentions() ?? []
+    if ((!text && mentions.length === 0) || !agentId || isStreaming || isUploading) return
 
-    // Build attachments array from done uploads
-    const messageAttachments = attachments
+    mentionInputRef.current?.clear()
+
+    const uploadAttachments = attachments
       .filter((a) => a.status === 'done' && a.serverPath && a.size !== undefined)
       .map((a) => ({ name: a.name, path: a.serverPath!, size: a.size!, mimeType: a.mimeType }))
+
+    const mentionAttachments = mentions
+      .filter((a) => a.serverPath)
+      .map((a) => ({ name: a.name, path: a.serverPath!, size: 0 }))
+
+    // The API receives all attachments so the LLM can call read_attachment
+    const apiAttachments = [...uploadAttachments, ...mentionAttachments]
+    // The displayed message only shows uploaded file chips — mentions appear inline as @filename in the text
+    const displayAttachments = uploadAttachments
 
     clearAttachments()
 
@@ -132,12 +146,12 @@ export function ChatView({ agentId, chatId, hostId, openFilePath }: ChatViewProp
       role: 'user',
       content: text,
       timestamp: new Date().toISOString(),
-      attachments: messageAttachments.length > 0 ? messageAttachments : null,
+      attachments: displayAttachments.length > 0 ? displayAttachments : null,
     }
     setLocalMsgs((prev) => [...prev, localUserMsg])
     prevResultChatIdRef.current = undefined
 
-    streamingSend({ agentId, prompt: text, chatId, attachments: messageAttachments.length > 0 ? messageAttachments : undefined })
+    streamingSend({ agentId, prompt: text, chatId, attachments: apiAttachments.length > 0 ? apiAttachments : undefined })
   }
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -273,7 +287,7 @@ export function ChatView({ agentId, chatId, hostId, openFilePath }: ChatViewProp
 
         {/* Input bar */}
         <div className="px-4 pb-4 flex-shrink-0 space-y-2">
-          {/* Attachment chips */}
+          {/* Upload attachment chips */}
           {attachments.length > 0 && (
             <AttachmentChips attachments={attachments} onRemove={removeAttachment} />
           )}
@@ -299,25 +313,20 @@ export function ChatView({ agentId, chatId, hostId, openFilePath }: ChatViewProp
               <Paperclip className="w-4 h-4" />
             </button>
 
-            {/* Text input */}
-            <input
-              className="flex-1 rounded-lg bg-[hsl(208_25%_12%)] border border-[hsl(208_25%_16%)] text-[hsl(210_13%_95%)] text-[0.875rem] px-4 py-[0.65rem] pr-10 outline-none transition-colors placeholder:text-[hsl(210_6%_40%)] focus:border-[hsl(200_85%_55%)]/50 disabled:opacity-50"
+            {/* Rich text input — handles @-mention chips inline */}
+            <MentionInput
+              ref={mentionInputRef}
+              agentId={agentId}
               placeholder={isStreaming ? 'Waiting for response...' : isUploading ? 'Uploading file...' : `Message ${agent?.name}...`}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey && !isStreaming && !isUploading) {
-                  e.preventDefault()
-                  handleSend()
-                }
-              }}
               disabled={isStreaming || isUploading}
+              onSend={handleSend}
+              onHasTextChange={setHasInputText}
             />
 
             {/* Send / Cancel button */}
             <button
               onClick={isStreaming ? streamingCancel : handleSend}
-              disabled={!isStreaming && (!input.trim() || !agentId || isUploading)}
+              disabled={!isStreaming && (!hasInputText || !agentId || isUploading)}
               className={`p-1.5 rounded-md transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed ${
                 isStreaming
                   ? 'text-[hsl(0_85%_55%)] hover:bg-[hsl(0_85%_55%)]/10'

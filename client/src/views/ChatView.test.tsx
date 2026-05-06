@@ -70,6 +70,38 @@ vi.mock('#/components/AttachmentChips', () => ({
   AttachmentChips: () => <div data-testid="attachment-chips" />,
 }))
 
+// MentionInput mock: renders a plain <input> so existing tests work unchanged.
+// The forwardRef exposes getText/getMentions/clear/focus via the ref.
+vi.mock('#/components/MentionInput', () => {
+  const React = require('react')
+  const MentionInput = React.forwardRef(
+    (props: Record<string, unknown>, ref: React.Ref<unknown>) => {
+      const valueRef = React.useRef('')
+      const [value, setValue] = React.useState('')
+      React.useImperativeHandle(ref, () => ({
+        getText: () => valueRef.current,
+        getMentions: () => [],
+        clear: () => { setValue(''); valueRef.current = ''; (props.onHasTextChange as (b: boolean) => void)?.(false) },
+        focus: () => {},
+      }))
+      return React.createElement('input', {
+        placeholder: props.placeholder as string,
+        disabled: props.disabled as boolean,
+        value,
+        onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+          valueRef.current = e.target.value
+          setValue(e.target.value);
+          (props.onHasTextChange as (b: boolean) => void)?.(e.target.value.length > 0)
+        },
+        onKeyDown: (e: React.KeyboardEvent) => {
+          if (e.key === 'Enter') (props.onSend as () => void)?.()
+        },
+      })
+    },
+  )
+  return { MentionInput }
+})
+
 describe('ChatView — streaming integration (S3c)', () => {
   beforeEach(() => {
     // jsdom doesn't implement scrollIntoView
