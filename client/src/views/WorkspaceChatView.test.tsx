@@ -173,8 +173,8 @@ describe('WorkspaceChatView — streaming integration (S5d)', () => {
       { wrapper: createWrapper() },
     )
 
-    // Thinking block should be present
-    expect(screen.getByText('Thoughts')).toBeTruthy()
+    // Thinking panel should be present
+    expect(screen.getByText('Thinking…')).toBeTruthy()
     // Thinking streaming indicator should be present
     const indicator = container.querySelector('[data-thinking-streaming]')
     expect(indicator).toBeTruthy()

@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react'
-import { Bot, ChevronDown, ChevronRight } from 'lucide-react'
+import { useRef, useEffect, useState } from 'react'
+import { Bot } from 'lucide-react'
 import { MarkdownContent } from './MarkdownContent'
 
 interface StreamingMessageBubbleProps {
@@ -69,39 +69,56 @@ function StreamingThinkingBlock({
   content: string
   isThinkingStreaming: boolean
 }) {
-  const [open, setOpen] = useState(false)
-  const toggle = useCallback(() => setOpen((prev) => !prev), [])
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const [exiting, setExiting] = useState(false)
+  const [mounted, setMounted] = useState(true)
+  const didStreamRef = useRef(isThinkingStreaming)
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [content])
+
+  useEffect(() => {
+    if (isThinkingStreaming) {
+      didStreamRef.current = true
+    } else if (didStreamRef.current) {
+      setExiting(true)
+    }
+  }, [isThinkingStreaming])
+
+  if (!mounted) return null
 
   return (
-    <div className="mb-1.5">
-      <button
-        onClick={toggle}
-        className="flex items-center gap-1.5 text-[11px] text-[hsl(210_8%_50%)] hover:text-[hsl(200_85%_55%)] transition-colors cursor-pointer bg-[hsl(208_25%_10%)] border border-[hsl(208_25%_14%)] rounded-md px-2.5 py-1.5 w-full"
-      >
-        {open ? (
-          <ChevronDown className="w-3 h-3 flex-shrink-0" />
-        ) : (
-          <ChevronRight className="w-3 h-3 flex-shrink-0" />
-        )}
-        <span>Thoughts</span>
+    <div
+      data-thinking-panel
+      {...(exiting ? { 'data-thinking-exiting': '' } : {})}
+      className="mb-1.5 overflow-hidden"
+      style={{
+        transition: 'opacity 400ms ease, max-height 400ms ease',
+        opacity: exiting ? 0 : 1,
+        maxHeight: exiting ? '0' : '999px',
+      }}
+      onTransitionEnd={() => {
+        if (exiting) setMounted(false)
+      }}
+    >
+      <div className="flex items-center gap-1.5 px-0.5 mb-1">
+        <span className="text-[11px] font-medium text-[hsl(210_8%_45%)]">Thinking…</span>
         {isThinkingStreaming && (
-          <span data-thinking-streaming className="w-1.5 h-1.5 rounded-full bg-[hsl(200_85%_55%)] animate-pulse ml-1" />
+          <span
+            data-thinking-streaming
+            className="w-1.5 h-1.5 rounded-full bg-[hsl(200_85%_55%)] animate-pulse"
+          />
         )}
-        <span className="text-[10px] text-[hsl(210_6%_35%)] ml-auto">
-          {content.length} chars
-        </span>
-      </button>
-      {open && (
-        <div className="mt-1 bg-[hsl(208_25%_8%)] border border-[hsl(208_25%_12%)] rounded-md px-3 py-2 text-[0.8rem] text-[hsl(210_8%_55%)] leading-relaxed whitespace-pre-wrap max-h-80 overflow-y-auto">
-          {content}
-          {isThinkingStreaming && (
-            <span
-              data-streaming-cursor
-              className="inline-block w-[2px] h-[1em] bg-[hsl(200_85%_55%)] ml-0.5 align-text-bottom animate-blink"
-            />
-          )}
-        </div>
-      )}
+      </div>
+      <div
+        ref={scrollRef}
+        data-thinking-scroll
+        className="max-h-48 overflow-y-auto text-[0.78rem] text-[hsl(210_8%_40%)] leading-relaxed whitespace-pre-wrap [mask-image:linear-gradient(to_bottom,transparent_0%,black_20%,black_100%)]"
+      >
+        {content}
+      </div>
     </div>
   )
 }

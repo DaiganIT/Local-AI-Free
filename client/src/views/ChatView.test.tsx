@@ -124,8 +124,8 @@ describe('ChatView — streaming integration (S3c)', () => {
       wrapper: createWrapper(),
     })
 
-    // StreamingMessageBubble shows thinking block
-    expect(screen.getByText('Thoughts')).toBeTruthy()
+    // StreamingMessageBubble shows thinking panel
+    expect(screen.getByText('Thinking…')).toBeTruthy()
     expect(screen.getByText('The answer')).toBeTruthy()
   })
 
@@ -240,7 +240,7 @@ describe('ChatView — streaming integration (S3c)', () => {
     // Thinking streaming indicator should be present
     const indicator = container.querySelector('[data-thinking-streaming]')
     expect(indicator).toBeTruthy()
-    expect(screen.getByText('Thoughts')).toBeTruthy()
+    expect(screen.getByText('Thinking…')).toBeTruthy()
   })
 
   it('hides thinking streaming indicator after thinking ends but text still streaming', () => {
@@ -262,8 +262,8 @@ describe('ChatView — streaming integration (S3c)', () => {
     // Thinking streaming indicator should NOT be present
     const indicator = container.querySelector('[data-thinking-streaming]')
     expect(indicator).toBeNull()
-    // But thinking content should still be visible
-    expect(screen.getByText('Thoughts')).toBeTruthy()
+    // But thinking panel should still be visible
+    expect(screen.getByText('Thinking…')).toBeTruthy()
     // And text cursor should still be active
     const cursor = container.querySelector('[data-streaming-cursor]')
     expect(cursor).toBeTruthy()
