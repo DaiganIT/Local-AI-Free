@@ -1,30 +1,42 @@
 import type { ModelProvider, ModelInfo } from "./types.js";
 import { OllamaProvider } from "./ollama-discovery.js";
 import { MlxProvider } from "./mlx-discovery.js";
+import { OmlxProvider } from "./omlx-discovery.js";
+import { LmStudioProvider } from "./lm-studio-discovery.js";
 
 /**
- * Create provider instances for the given provider names.
- * Defaults to ["ollama"] if the list is empty.
+ * Auto-discover all known providers by checking reachability.
+ * Only reachable providers with their version metadata are returned.
  */
-export function collectProviders(providerNames: string[]): ModelProvider[] {
-  if (providerNames.length === 0) {
-    providerNames = ["ollama"];
-  }
+export async function autoDiscoverProviders(): Promise<{
+  providers: ModelProvider[];
+  meta: { name: string; version: string }[];
+}> {
+  const all: ModelProvider[] = [
+    new OllamaProvider(),
+    new MlxProvider(),
+    new OmlxProvider(),
+    new LmStudioProvider(),
+  ];
 
-  const providers: ModelProvider[] = [];
-  for (const name of providerNames) {
-    switch (name) {
-      case "ollama":
-        providers.push(new OllamaProvider());
-        break;
-      case "mlx":
-        providers.push(new MlxProvider());
-        break;
-      default:
-        console.warn(`[discovery] Unknown provider: "${name}" — skipping`);
-    }
-  }
-  return providers;
+  const results = await Promise.all(
+    all.map(async (provider) => {
+      try {
+        const { version, reachable } = await provider.version();
+        return { provider, reachable, version };
+      } catch {
+        console.warn(`[discovery] Provider "${provider.name}" threw during version check`);
+        return { provider, reachable: false, version: "unknown" };
+      }
+    }),
+  );
+
+  const reachable = results.filter((r) => r.reachable);
+
+  return {
+    providers: reachable.map((r) => r.provider),
+    meta: reachable.map((r) => ({ name: r.provider.name, version: r.version })),
+  };
 }
 
 /**
@@ -44,17 +56,4 @@ export async function fetchAllModels(providers: ModelProvider[]): Promise<ModelI
     }),
   );
   return results.flat();
-}
-
-/**
- * Build the providers metadata list by checking each provider's version.
- */
-export async function discoverProviders(providers: ModelProvider[]): Promise<{ name: string; version: string }[]> {
-  const results = await Promise.all(
-    providers.map(async (provider) => {
-      const { version, reachable } = await provider.version();
-      return { name: provider.name, version: reachable ? version : "unreachable" };
-    }),
-  );
-  return results;
 }

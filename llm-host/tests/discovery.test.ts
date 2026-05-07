@@ -1,32 +1,54 @@
-import { describe, it, expect, vi } from "vitest";
-import { collectProviders, fetchAllModels } from "../src/providers/discovery.js";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { autoDiscoverProviders, fetchAllModels } from "../src/providers/discovery.js";
 import type { ModelProvider, ModelInfo } from "../src/providers/types.js";
-import { OllamaProvider } from "../src/providers/ollama-discovery.js";
-import { MlxProvider } from "../src/providers/mlx-discovery.js";
 
-describe("collectProviders", () => {
-  it("creates OllamaProvider when 'ollama' is in the list", () => {
-    const providers = collectProviders(["ollama"]);
-    expect(providers).toHaveLength(1);
-    expect(providers[0].name).toBe("ollama");
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+describe("autoDiscoverProviders", () => {
+  it("returns only reachable providers", async () => {
+    // Mock Ollama as reachable, MLX as unreachable, Omlx as reachable
+    const fetchMock = vi.spyOn(global, "fetch");
+
+    // ollama: reachable
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ version: "0.5.0" }), { status: 200 }),
+    );
+    // mlx: unreachable (connection refused)
+    fetchMock.mockRejectedValueOnce(new Error("connection refused"));
+    // omlx: reachable
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ status: "healthy" }), { status: 200 }),
+    );
+
+    const { providers, meta } = await autoDiscoverProviders();
+
+    expect(providers.map((p) => p.name)).toEqual(["ollama", "omlx"]);
+    expect(meta).toEqual([
+      { name: "ollama", version: "0.5.0" },
+      { name: "omlx", version: "omlx" },
+    ]);
   });
 
-  it("creates MlxProvider when 'mlx' is in the list", () => {
-    const providers = collectProviders(["mlx"]);
-    expect(providers).toHaveLength(1);
-    expect(providers[0].name).toBe("mlx");
+  it("returns empty when no providers are reachable", async () => {
+    vi.spyOn(global, "fetch").mockRejectedValue(new Error("all dead"));
+
+    const { providers, meta } = await autoDiscoverProviders();
+
+    expect(providers).toEqual([]);
+    expect(meta).toEqual([]);
   });
 
-  it("creates multiple providers", () => {
-    const providers = collectProviders(["ollama", "mlx"]);
-    expect(providers).toHaveLength(2);
-    expect(providers.map((p) => p.name)).toEqual(["ollama", "mlx"]);
-  });
+  it("handles providers that throw during version check", async () => {
+    const fetchMock = vi.spyOn(global, "fetch");
+    // All three throw
+    fetchMock.mockRejectedValue(new Error("network error"));
 
-  it("defaults to ['ollama'] when env var is empty-like", () => {
-    const providers = collectProviders([]);
-    expect(providers).toHaveLength(1);
-    expect(providers[0].name).toBe("ollama");
+    const { providers, meta } = await autoDiscoverProviders();
+
+    expect(providers).toEqual([]);
+    expect(meta).toEqual([]);
   });
 });
 
@@ -76,5 +98,22 @@ describe("fetchAllModels", () => {
     expect(models).toEqual([
       { name: "qwen2.5", size: 0, provider: "mlx" },
     ]);
+  });
+
+  it("handles providers that throw", async () => {
+    const badProvider: ModelProvider = {
+      name: "broken",
+      version: vi.fn().mockRejectedValue(new Error("boom")),
+      models: vi.fn().mockRejectedValue(new Error("boom")),
+    };
+
+    const goodProvider: ModelProvider = {
+      name: "ok",
+      version: vi.fn().mockResolvedValue({ version: "1.0", reachable: true }),
+      models: vi.fn().mockResolvedValue([{ name: "test", size: 0, provider: "ok" }]),
+    };
+
+    const models = await fetchAllModels([badProvider, goodProvider]);
+    expect(models).toEqual([{ name: "test", size: 0, provider: "ok" }]);
   });
 });
