@@ -1,6 +1,8 @@
-export interface OllamaModel {
+export interface ModelInfo {
   name: string;
   size: number;
+  /** Provider that discovered this model (e.g. "ollama", "mlx"). */
+  provider: string;
   contextLength?: number;
   capabilities?: string[];
 }
@@ -10,8 +12,8 @@ export interface HostInfo {
   hostname: string;
   connectedAt: string;
   lastHeartbeat: string;
-  ollamaVersion: string;
-  models: OllamaModel[];
+  providers: { name: string; version: string }[];
+  models: ModelInfo[];
   status: "online" | "offline";
 }
 
@@ -20,12 +22,12 @@ export type HostMessage =
   | {
       type: "register";
       hostname: string;
-      ollamaVersion: string;
-      models: OllamaModel[];
+      providers: { name: string; version: string }[];
+      models: ModelInfo[];
     }
   | {
       type: "heartbeat";
-      models: OllamaModel[];
+      models: ModelInfo[];
     };
 
 // Messages sent from server → llm-host

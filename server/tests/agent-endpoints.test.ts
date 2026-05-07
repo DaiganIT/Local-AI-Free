@@ -56,7 +56,7 @@ describe("GET /api/agents", () => {
     hostname: "laptop",
     connectedAt: "",
     lastHeartbeat: "",
-    ollamaVersion: "1.0",
+    providers: [{ name: "ollama", version: "1.0" }],
     models: [],
     status: "online",
   };
@@ -65,7 +65,7 @@ describe("GET /api/agents", () => {
     hostname: "desktop",
     connectedAt: "",
     lastHeartbeat: "",
-    ollamaVersion: "1.0",
+    providers: [{ name: "ollama", version: "1.0" }],
     models: [],
     status: "online",
   };
@@ -163,7 +163,7 @@ describe("POST /api/agents", () => {
     hostname: "laptop",
     connectedAt: "",
     lastHeartbeat: "",
-    ollamaVersion: "1.0",
+    providers: [{ name: "ollama", version: "1.0" }],
     models: [],
     status: "online",
   };
@@ -280,7 +280,7 @@ describe("GET /api/agents/:agentId/folder-tree", () => {
     hostname: "laptop",
     connectedAt: "",
     lastHeartbeat: "",
-    ollamaVersion: "1.0",
+    providers: [{ name: "ollama", version: "1.0" }],
     models: [],
     status: "online",
   };
@@ -289,7 +289,7 @@ describe("GET /api/agents/:agentId/folder-tree", () => {
     hostname: "desktop",
     connectedAt: "",
     lastHeartbeat: "",
-    ollamaVersion: "1.0",
+    providers: [{ name: "ollama", version: "1.0" }],
     models: [],
     status: "online",
   };
@@ -366,7 +366,7 @@ describe("DELETE /api/agents/:agentId", () => {
     hostname: "laptop",
     connectedAt: "",
     lastHeartbeat: "",
-    ollamaVersion: "1.0",
+    providers: [{ name: "ollama", version: "1.0" }],
     models: [],
     status: "online",
   };
@@ -375,7 +375,7 @@ describe("DELETE /api/agents/:agentId", () => {
     hostname: "desktop",
     connectedAt: "",
     lastHeartbeat: "",
-    ollamaVersion: "1.0",
+    providers: [{ name: "ollama", version: "1.0" }],
     models: [],
     status: "online",
   };

@@ -40,7 +40,7 @@ const hostA: HostInfo = {
   hostname: "laptop",
   connectedAt: "",
   lastHeartbeat: "",
-  ollamaVersion: "1.0",
+  providers: [{ name: "ollama", version: "1.0" }],
   models: [],
   status: "online",
 };
@@ -218,7 +218,7 @@ describe("GET /api/workspace-chats/:chatId", () => {
       hostname: "desktop",
       connectedAt: "",
       lastHeartbeat: "",
-      ollamaVersion: "1.0",
+      providers: [{ name: "ollama", version: "1.0" }],
       models: [],
       status: "online",
     };

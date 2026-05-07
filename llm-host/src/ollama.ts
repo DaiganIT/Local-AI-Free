@@ -1,4 +1,4 @@
-import type { OllamaModel } from "./protocol.js";
+import type { ModelInfo } from "./protocol.js";
 
 const defaultBase = () => process.env.OLLAMA_HOST ?? "http://localhost:11434";
 
@@ -29,7 +29,7 @@ function extractContextLength(modelInfo: Record<string, unknown>): number | unde
   return undefined;
 }
 
-export async function getOllamaModels(ollamaBase = defaultBase()): Promise<OllamaModel[]> {
+export async function getOllamaModels(ollamaBase = defaultBase()): Promise<ModelInfo[]> {
   try {
     const res = await fetch(`${ollamaBase}/api/tags`);
     const data = (await res.json()) as {
@@ -41,8 +41,8 @@ export async function getOllamaModels(ollamaBase = defaultBase()): Promise<Ollam
       : undefined;
 
     const results = await Promise.all(
-      data.models.map(async (m): Promise<OllamaModel> => {
-        const base: OllamaModel = { name: m.name, size: m.size };
+      data.models.map(async (m): Promise<ModelInfo> => {
+        const base: ModelInfo = { name: m.name, size: m.size, provider: "ollama" };
         try {
           const showRes = await fetch(`${ollamaBase}/api/show`, {
             method: "POST",

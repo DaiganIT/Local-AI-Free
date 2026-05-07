@@ -45,7 +45,7 @@ describe("ws-handler", () => {
     socket.emit("message", JSON.stringify({
       type: "register",
       hostname: "my-pc",
-      ollamaVersion: "1.0",
+      providers: [{ name: "ollama", version: "1.0" }],
       models: [],
     }));
 
@@ -58,14 +58,14 @@ describe("ws-handler", () => {
     socket.emit("message", JSON.stringify({
       type: "register",
       hostname: "my-pc",
-      ollamaVersion: "1.7.0",
+      providers: [{ name: "ollama", version: "1.7.0" }],
       models: [{ name: "llama3", size: 4700000000 }],
     }));
 
     expect(reg.registerHost).toHaveBeenCalledWith(
       socket,
       "my-pc",
-      "1.7.0",
+      [{ name: "ollama", version: "1.7.0" }],
       [{ name: "llama3", size: 4700000000 }],
     );
   });
@@ -83,7 +83,7 @@ describe("ws-handler", () => {
     socket.emit("message", JSON.stringify({
       type: "register",
       hostname: "my-pc",
-      ollamaVersion: "1.0",
+      providers: [{ name: "ollama", version: "1.0" }],
       models: [],
     }));
 
@@ -110,7 +110,7 @@ describe("ws-handler", () => {
     socket.emit("message", JSON.stringify({
       type: "register",
       hostname: "my-pc",
-      ollamaVersion: "1.0",
+      providers: [{ name: "ollama", version: "1.0" }],
       models: [],
     }));
 
@@ -142,7 +142,7 @@ describe("ws-handler auth", () => {
     socket.emit("message", JSON.stringify({
       type: "register",
       hostname: "my-pc",
-      ollamaVersion: "1.0",
+      providers: [{ name: "ollama", version: "1.0" }],
       models: [],
     }));
     expect(socket.sent[0]).toBe('{"type":"registered","id":"host-1"}');
@@ -155,7 +155,7 @@ describe("ws-handler auth", () => {
     socket.emit("message", JSON.stringify({
       type: "register",
       hostname: "my-pc",
-      ollamaVersion: "1.0",
+      providers: [{ name: "ollama", version: "1.0" }],
       models: [],
       apiKey: "secret-key",
     }));
@@ -169,7 +169,7 @@ describe("ws-handler auth", () => {
     socket.emit("message", JSON.stringify({
       type: "register",
       hostname: "my-pc",
-      ollamaVersion: "1.0",
+      providers: [{ name: "ollama", version: "1.0" }],
       models: [],
     }));
     expect(socket.sent[0]).toBe('{"type":"error","message":"unauthorized"}');
@@ -183,7 +183,7 @@ describe("ws-handler auth", () => {
     socket.emit("message", JSON.stringify({
       type: "register",
       hostname: "my-pc",
-      ollamaVersion: "1.0",
+      providers: [{ name: "ollama", version: "1.0" }],
       models: [],
       apiKey: "wrong-key",
     }));
@@ -199,7 +199,7 @@ describe("ws-handler auth", () => {
     socket.emit("message", JSON.stringify({
       type: "register",
       hostname: "my-pc",
-      ollamaVersion: "1.0",
+      providers: [{ name: "ollama", version: "1.0" }],
       models: [],
       apiKey: "wrong-key",
     }));

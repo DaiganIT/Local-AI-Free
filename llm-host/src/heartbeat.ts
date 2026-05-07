@@ -1,8 +1,8 @@
-import { buildHeartbeatMessage, type OllamaModel } from "./protocol.js";
+import { buildHeartbeatMessage, type ModelInfo } from "./protocol.js";
 
 export interface HeartbeatOptions {
   intervalMs: number;
-  fetchModels: () => Promise<OllamaModel[]>;
+  fetchModels: () => Promise<ModelInfo[]>;
   send: (data: string) => void;
 }
 

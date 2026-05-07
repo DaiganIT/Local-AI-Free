@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { createRegistry, OllamaModel } from "../src/registry.js";
+import { createRegistry } from "../src/registry.js";
+import type { ModelInfo } from "../src/types.js";
 
 // ── Fakes ────────────────────────────────────────────────────────────────────
 let idCounter = 0;
@@ -18,9 +19,11 @@ function makeRegistry() {
   return createRegistry({ generateId: fakeId, clock: fakeClock });
 }
 
-const sampleModels: OllamaModel[] = [
-  { name: "llama3", size: 4_700_000_000 },
+const sampleModels: ModelInfo[] = [
+  { name: "llama3", size: 4_700_000_000, provider: "ollama" },
 ];
+
+const sampleProviders = [{ name: "ollama", version: "1.7.0" }];
 
 // ── Tests ────────────────────────────────────────────────────────────────────
 describe("createRegistry", () => {
@@ -32,19 +35,19 @@ describe("createRegistry", () => {
   describe("registerHost", () => {
     it("returns a deterministic id when injected", () => {
       const reg = makeRegistry();
-      const id = reg.registerHost(fakeSocket, "my-pc", "1.7.0", sampleModels);
+      const id = reg.registerHost(fakeSocket, "my-pc", sampleProviders, sampleModels);
       expect(id).toBe("host-1");
     });
 
     it("adds a host that appears in listHosts", () => {
       const reg = makeRegistry();
-      reg.registerHost(fakeSocket, "my-pc", "1.7.0", sampleModels);
+      reg.registerHost(fakeSocket, "my-pc", sampleProviders, sampleModels);
       const hosts = reg.listHosts();
       expect(hosts).toHaveLength(1);
       expect(hosts[0]).toMatchObject({
         id: "host-1",
         hostname: "my-pc",
-        ollamaVersion: "1.7.0",
+        providers: sampleProviders,
         models: sampleModels,
         status: "online",
       });
@@ -52,7 +55,7 @@ describe("createRegistry", () => {
 
     it("sets connectedAt and lastHeartbeat to the injected clock value", () => {
       const reg = makeRegistry();
-      reg.registerHost(fakeSocket, "my-pc", "1.7.0", []);
+      reg.registerHost(fakeSocket, "my-pc", sampleProviders, []);
       const hosts = reg.listHosts();
       expect(hosts[0].connectedAt).toBe(fakeNow);
       expect(hosts[0].lastHeartbeat).toBe(fakeNow);
@@ -60,8 +63,8 @@ describe("createRegistry", () => {
 
     it("increments ids across registrations", () => {
       const reg = makeRegistry();
-      const id1 = reg.registerHost(fakeSocket, "pc-a", "1.0.0", []);
-      const id2 = reg.registerHost(fakeSocket, "pc-b", "1.0.0", []);
+      const id1 = reg.registerHost(fakeSocket, "pc-a", [], []);
+      const id2 = reg.registerHost(fakeSocket, "pc-b", [], []);
       expect(id1).toBe("host-1");
       expect(id2).toBe("host-2");
     });
@@ -74,11 +77,11 @@ describe("createRegistry", () => {
         generateId: () => "h1",
         clock: () => now,
       });
-      const id = reg.registerHost(fakeSocket, "pc", "1.0", []);
+      const id = reg.registerHost(fakeSocket, "pc", [], []);
       expect(reg.listHosts()[0].lastHeartbeat).toBe("t0");
 
       now = "t1";
-      const newModels: OllamaModel[] = [{ name: "mistral", size: 1e9 }];
+      const newModels: ModelInfo[] = [{ name: "mistral", size: 1e9, provider: "ollama" }];
       reg.updateHeartbeat(id, newModels);
 
       const host = reg.listHosts().find((h) => h.id === id)!;
@@ -97,7 +100,7 @@ describe("createRegistry", () => {
   describe("removeHost", () => {
     it("removes a registered host", () => {
       const reg = makeRegistry();
-      const id = reg.registerHost(fakeSocket, "pc", "1.0", []);
+      const id = reg.registerHost(fakeSocket, "pc", [], []);
       reg.removeHost(id);
       expect(reg.listHosts()).toEqual([]);
     });
@@ -112,8 +115,8 @@ describe("createRegistry", () => {
     it("two registries do not share state", () => {
       const a = makeRegistry();
       const b = makeRegistry();
-      a.registerHost(fakeSocket, "pc-a", "1.0", []);
-      b.registerHost(fakeSocket, "pc-b", "1.0", []);
+      a.registerHost(fakeSocket, "pc-a", [], []);
+      b.registerHost(fakeSocket, "pc-b", [], []);
       expect(a.listHosts()).toHaveLength(1);
       expect(b.listHosts()).toHaveLength(1);
       expect(a.listHosts()[0].hostname).toBe("pc-a");

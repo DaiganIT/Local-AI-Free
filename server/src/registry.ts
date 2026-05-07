@@ -1,5 +1,5 @@
 import { WebSocket } from "ws";
-import { HostInfo, OllamaModel } from "./types.js";
+import { HostInfo, ModelInfo } from "./types.js";
 
 interface HostEntry extends HostInfo {
   socket: WebSocket;
@@ -14,10 +14,10 @@ export interface Registry {
   registerHost(
     socket: WebSocket,
     hostname: string,
-    ollamaVersion: string,
-    models: OllamaModel[]
+    providers: { name: string; version: string }[],
+    models: ModelInfo[]
   ): string;
-  updateHeartbeat(id: string, models: OllamaModel[]): void;
+  updateHeartbeat(id: string, models: ModelInfo[]): void;
   removeHost(id: string): void;
   listHosts(): HostInfo[];
 }
@@ -29,8 +29,8 @@ export function createRegistry({ generateId, clock }: RegistryOptions): Registry
     registerHost(
       socket: WebSocket,
       hostname: string,
-      ollamaVersion: string,
-      models: OllamaModel[]
+      providers: { name: string; version: string }[],
+      models: ModelInfo[]
     ): string {
       const id = generateId();
       const now = clock();
@@ -40,7 +40,7 @@ export function createRegistry({ generateId, clock }: RegistryOptions): Registry
         hostname,
         connectedAt: now,
         lastHeartbeat: now,
-        ollamaVersion,
+        providers,
         models,
         status: "online",
       });
@@ -48,7 +48,7 @@ export function createRegistry({ generateId, clock }: RegistryOptions): Registry
       return id;
     },
 
-    updateHeartbeat(id: string, models: OllamaModel[]): void {
+    updateHeartbeat(id: string, models: ModelInfo[]): void {
       const host = hosts.get(id);
       if (!host) return;
       host.lastHeartbeat = clock();

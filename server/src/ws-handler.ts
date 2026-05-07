@@ -68,7 +68,7 @@ export function createWsHandler(registry: Registry, auth?: AuthConfig, agentRout
         hostId = registry.registerHost(
           socket as never,
           reg.hostname,
-          reg.ollamaVersion,
+          reg.providers,
           reg.models,
         );
 

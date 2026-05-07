@@ -38,7 +38,7 @@ describe("routes", () => {
         hostname: "my-pc",
         connectedAt: "",
         lastHeartbeat: "",
-        ollamaVersion: "1.0",
+        providers: [{ name: "ollama", version: "1.0" }],
         models: [],
         status: "online",
       },

@@ -51,7 +51,7 @@ const testHost: HostInfo = {
   hostname: "my-pc",
   connectedAt: "2024-01-01T00:00:00Z",
   lastHeartbeat: "2024-01-01T00:00:00Z",
-  ollamaVersion: "0.3.5",
+  providers: [{ name: "ollama", version: "0.3.5" }],
   models: [],
   status: "online",
 };

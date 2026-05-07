@@ -4,7 +4,8 @@ config();
 import Database from "better-sqlite3";
 import { WebSocket } from "ws";
 import os from "os";
-import { getOllamaVersion, getOllamaModels } from "./ollama.js";
+import { collectProviders, fetchAllModels, discoverProviders } from "./providers/discovery.js";
+import type { ModelInfo } from "./providers/types.js";
 import { buildRegisterMessage } from "./protocol.js";
 import { createHeartbeat } from "./heartbeat.js";
 import { handleMessage } from "./messageHandler.js";
@@ -34,8 +35,14 @@ const wchatDb = createWorkspaceChatsDatabase(sqliteDb);
 const supervisor = createSupervisor(db);
 const tracker = createRequestTracker();
 
+// Provider instances (created once, reused on reconnect)
+const providerNames = (process.env.LLM_PROVIDERS ?? "ollama").split(",").map((s) => s.trim()).filter(Boolean);
+const providers = collectProviders(providerNames);
+
+console.log(`[host] Providers: ${providers.map((p) => p.name).join(", ") || "(none)"}`);
+
 // Cache models for contextLength lookup
-let cachedModels: Awaited<ReturnType<typeof getOllamaModels>> = [];
+let cachedModels: ModelInfo[] = [];
 
 function contextLengthFor(model: string): number | undefined {
   return cachedModels.find((m) => m.name === model)?.contextLength;
@@ -43,24 +50,22 @@ function contextLengthFor(model: string): number | undefined {
 
 async function connect(): Promise<void> {
   const hostname = os.hostname();
-  const { version: ollamaVersion, reachable } = await getOllamaVersion();
-  const models = reachable ? await getOllamaModels() : [];
+  const providerMeta = await discoverProviders(providers);
+  const models = await fetchAllModels(providers);
   cachedModels = models;
 
   console.log(`[host] Connecting to ${SERVER_URL} as "${hostname}"…`);
-  if (reachable) {
-    console.log(`[host] Ollama ${ollamaVersion} — ${models.length} model(s) loaded`);
-  } else {
-    console.warn(`[host] Ollama not reachable — the host will register with 0 models.`);
-    console.warn(`[host] Start Ollama and restart this host, or it will retry on the next heartbeat.`);
+  for (const p of providerMeta) {
+    console.log(`[host]   ${p.name}: ${p.version}`);
   }
+  console.log(`[host]   ${models.length} model(s) total`);
 
   const socket = new WebSocket(SERVER_URL);
 
   // ── Register once connected ──────────────────────────────────────────────
   socket.on("open", () => {
     console.log("[host] Connected — registering…");
-    socket.send(buildRegisterMessage(hostname, ollamaVersion, models, API_KEY));
+    socket.send(buildRegisterMessage(hostname, providerMeta, models, API_KEY));
   });
 
   // ── Handle server messages ───────────────────────────────────────────────
@@ -70,7 +75,7 @@ async function connect(): Promise<void> {
         console.log(`[host] Registered with ID: ${id}`);
         createHeartbeat({
           intervalMs: HEARTBEAT_INTERVAL_MS,
-          fetchModels: getOllamaModels,
+          fetchModels: () => fetchAllModels(providers),
           send: (data) => socket.send(data),
         });
       },

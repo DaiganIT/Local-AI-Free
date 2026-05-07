@@ -1,6 +1,7 @@
-export interface OllamaModel {
+export interface ModelInfo {
   name: string;
   size: number;
+  provider: string;
   contextLength?: number;
   capabilities?: string[];
 }
@@ -13,14 +14,14 @@ export interface OllamaMessage {
 export interface RegisterMessage {
   type: "register";
   hostname: string;
-  ollamaVersion: string;
-  models: OllamaModel[];
+  providers: { name: string; version: string }[];
+  models: ModelInfo[];
   apiKey: string;
 }
 
 export interface HeartbeatMessage {
   type: "heartbeat";
-  models: OllamaModel[];
+  models: ModelInfo[];
 }
 
 export interface RegisteredMessage {
@@ -70,8 +71,8 @@ export interface StreamMessage {
 export type OutgoingMessage = RegisterMessage | HeartbeatMessage | ServerResponse | StreamMessage;
 export type IncomingMessage = RegisteredMessage | PingMessage | ServerRequest;
 
-export function buildRegisterMessage(hostname: string, version: string, models: OllamaModel[], apiKey: string): string {
-  const msg: RegisterMessage = { type: "register", hostname, ollamaVersion: version, models, apiKey };
+export function buildRegisterMessage(hostname: string, providers: { name: string; version: string }[], models: ModelInfo[], apiKey: string): string {
+  const msg: RegisterMessage = { type: "register", hostname, providers, models, apiKey };
   return JSON.stringify(msg);
 }
 
@@ -90,7 +91,7 @@ export function buildStreamMessage(id: string, event: StreamEvent): string {
   return JSON.stringify(msg);
 }
 
-export function buildHeartbeatMessage(models: OllamaModel[]): string {
+export function buildHeartbeatMessage(models: ModelInfo[]): string {
   const msg: HeartbeatMessage = { type: "heartbeat", models };
   return JSON.stringify(msg);
 }
