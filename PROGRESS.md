@@ -16,3 +16,21 @@ The llm-host currently only supports Ollama for discovering available LLM models
 | **P4** | ✅ DONE | **Update protocol: add `provider` to `ModelInfo` + add `providers` to register** — Each `ModelInfo` now carries a `provider` field. `RegisterMessage` uses `providers: {name, version}[]` instead of `ollamaVersion`. Heartbeat unchanged. Updated all types in `protocol.ts`, `server/types.ts`, `providers/types.ts`, registry, ws-handler, and all 40+38=78 tests pass. |
 | **P5** | ✅ DONE | **Wire into `index.ts`** — Replaced direct `getOllamaVersion`/`getOllamaModels` calls with `collectProviders`, `fetchAllModels`, and `discoverProviders` from `providers/discovery.ts`. Providers configured via `LLM_PROVIDERS` env var (defaults to `"ollama"`). 6 new discovery tests + all existing tests pass. |
 | **P6** | ✅ DONE | **Update server `registry.ts` + `types.ts`** — `HostInfo` now stores `providers: {name, version}[]` instead of `ollamaVersion`. All server-source references to `ollamaVersion` removed. All 12 server test files with HostInfo mocks updated. All 251 server tests pass. |
+
+## Provider Online Status in Client UI
+
+### Problem
+
+The client types are out of sync with the server — `HostInfo` still uses `ollamaVersion: string` and `OllamaModel` lacks `provider`. Additionally, the client doesn't derive agent online/offline status from provider reachability. An agent should be shown as offline when its provider is unreachable (e.g., Ollama not running → no models listed → agent offline).
+
+### Rule
+
+> **An agent is online only if** its host is online **AND** its model name is found in that host's `models` array. Otherwise → offline.
+
+### Slices
+
+| # | Status | Description |
+|---|--------|-------------|
+| **S1** | ✅ DONE | **Fix client `types.ts`** — Rename `OllamaModel` → `ModelInfo` (add `provider` field). Replace `HostInfo.ollamaVersion` with `providers: {name, version}[]`. Fix all client references and tests. |
+| **S2** | ✅ DONE | **Derive agent `provider` and `status` from host data** — In `useAgents()` / `useAgent()`, cross-reference each agent's `model` against its host's `models` to derive `provider` and compute online/offline based on the rule above. |
+| **S3** | ✅ DONE | **Show provider online status in the UI** — Update `ServerBar`, agent cards, and any model badges to reflect provider-derived online/offline state (green/gray dot, model badge with provider info). |

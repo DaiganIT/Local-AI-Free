@@ -82,10 +82,10 @@ export function AgentDetailView({ agentId, hostId, openFilePath }: AgentDetailVi
                 </div>
                 {/* Status ring */}
                 <div className={`absolute -inset-1 rounded-[18px] border-2 transition-colors duration-700 ${
-                  agent.status === 'online'
+                  agent.providerOnline === true
                     ? 'border-discord-green/40 status-ping'
-                    : agent.status === 'idle'
-                    ? 'border-discord-yellow/30'
+                    : agent.providerOnline === false
+                    ? 'border-discord-red/40'
                     : 'border-discord-text-muted/20'
                 }`} />
               </div>
@@ -103,13 +103,18 @@ export function AgentDetailView({ agentId, hostId, openFilePath }: AgentDetailVi
                     </span>
                   )}
                   <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest ${
-                    agent.status === 'online' ? 'text-discord-green' : agent.status === 'idle' ? 'text-discord-yellow' : 'text-discord-text-muted'
+                    agent.providerOnline === true ? 'text-discord-green' : agent.providerOnline === false ? 'text-discord-red' : 'text-discord-text-muted'
                   }`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${
-                      agent.status === 'online' ? 'bg-discord-green' : agent.status === 'idle' ? 'bg-discord-yellow' : 'bg-discord-text-muted'
+                      agent.providerOnline === true ? 'bg-discord-green' : agent.providerOnline === false ? 'bg-discord-red' : 'bg-discord-text-muted'
                     }`} />
-                    {agent.status}
+                    {agent.providerOnline === true ? 'available' : agent.providerOnline === false ? 'unavailable' : 'unknown'}
                   </span>
+                  {agent.provider && (
+                    <span className="text-[10px] font-mono text-discord-text-muted bg-discord-surface px-1.5 py-0.5 rounded border border-discord-border">
+                      via {agent.provider}
+                    </span>
+                  )}
                 </div>
               </div>
 

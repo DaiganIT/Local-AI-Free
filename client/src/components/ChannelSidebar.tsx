@@ -158,10 +158,10 @@ function HostChannels({
 }) {
   const activeAgentId = getActiveAgentId(selection)
   const onlineAgents = agents.filter(
-    (a) => a.hostId === hostId && a.status === 'online',
+    (a) => a.hostId === hostId && a.providerOnline === true,
   )
   const otherAgents = agents.filter(
-    (a) => a.hostId === hostId && a.status !== 'online',
+    (a) => a.hostId === hostId && a.providerOnline !== true,
   )
   const { data: workspaces } = useWorkspaces(hostId)
 
@@ -214,7 +214,7 @@ function HostChannels({
               activeChatId={selection?.kind === 'chat' ? selection.chatId : null}
               selection={selection}
               onSelect={onSelect}
-              muted={agent.status === 'offline'}
+              muted={agent.providerOnline === false}
             />
           ))}
         </div>
@@ -299,7 +299,7 @@ function AgentWithChats({
   }
 
   const statusIcon = muted
-    ? <span className={`w-2.5 h-2.5 rounded-full ${agent.status === 'idle' ? 'bg-[hsl(38_100%_58%)]' : 'bg-[hsl(210_6%_40%)]'}`} />
+    ? <span className="w-2.5 h-2.5 rounded-full bg-[hsl(0_56%_48%)]" />
     : (
       <span className="relative flex h-2.5 w-2.5">
         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[hsl(153_46%_49%)] opacity-75" />

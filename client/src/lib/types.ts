@@ -1,6 +1,8 @@
-export interface OllamaModel {
+export interface ModelInfo {
   name: string
   size: number
+  /** Provider that discovered this model (e.g. "ollama", "mlx"). */
+  provider: string
   contextLength?: number
   capabilities?: string[]
 }
@@ -10,8 +12,8 @@ export interface HostInfo {
   hostname: string
   connectedAt: string
   lastHeartbeat: string
-  ollamaVersion: string
-  models: OllamaModel[]
+  providers: { name: string; version: string }[]
+  models: ModelInfo[]
   status: 'online' | 'offline'
 }
 
@@ -23,6 +25,10 @@ export interface AgentInfo {
   status: 'online' | 'idle' | 'offline'
   model: string
   description?: string
+  /** Provider name (e.g. "ollama") — derived from host model matching. */
+  provider?: string
+  /** Whether the provider listing this model is reachable. */
+  providerOnline?: boolean
 
   tools?: string[]
   skills?: { name: string; description: string }[]

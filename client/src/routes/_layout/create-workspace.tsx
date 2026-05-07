@@ -162,7 +162,7 @@ function CreateWorkspace() {
                   {onlineHosts.map((h) => (
                     <option key={h.id} value={h.id}>
                       {h.hostname}{' '}
-                      {h.ollamaVersion ? `(${h.ollamaVersion})` : ''}
+                      {h.providers.length > 0 ? `(${h.providers.map(p => p.name).join(', ')})` : ''}
                     </option>
                   ))}
                 </select>

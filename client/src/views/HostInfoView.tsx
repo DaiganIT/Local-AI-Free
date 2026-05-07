@@ -1,5 +1,5 @@
 import { useHosts, useAgents } from '#/hooks'
-import { Server, Clock, Activity, Cpu } from 'lucide-react'
+import { Server, Clock, Activity } from 'lucide-react'
 import { formatRelativeTime, formatBytes } from '../lib/formatting'
 import { CapabilityBadge } from '#/components/CapabilityBadge'
 
@@ -54,11 +54,30 @@ export function HostInfoView({ hostId }: { hostId: string }) {
               label="Last heartbeat"
               value={lastSeen}
             />
-            <InfoRow
-              icon={<Cpu className="w-3.5 h-3.5" />}
-              label="Ollama version"
-              value={host.ollamaVersion}
-            />
+          </div>
+        </section>
+
+        {/* Providers */}
+        <section>
+          <h3 className="text-[10px] font-semibold text-[hsl(210_6%_40%)] uppercase tracking-wider mb-3">
+            Providers ({host.providers.length})
+          </h3>
+          <div className="rounded-lg border border-[hsl(208_25%_14%)] overflow-hidden">
+            {host.providers.map((p, i) => {
+              const isReachable = p.version !== 'unreachable' && p.version !== 'unknown'
+              return (
+                <div
+                  key={p.name}
+                  className={`px-3 py-2.5 text-sm flex items-center gap-2 ${i > 0 ? 'border-t border-[hsl(208_25%_14%)]' : ''}`}
+                >
+                  <span
+                    className={`w-2 h-2 rounded-full ${isReachable ? 'bg-[hsl(153_46%_49%)]' : 'bg-[hsl(0_56%_48%)]'}`}
+                  />
+                  <span className="font-mono text-[hsl(210_13%_95%)]">{p.name}</span>
+                  <span className="text-[hsl(210_8%_65%)] text-xs">{p.version}</span>
+                </div>
+              )
+            })}
           </div>
         </section>
 
@@ -110,10 +129,10 @@ export function HostInfoView({ hostId }: { hostId: string }) {
                 <div className="flex items-center gap-2">
                   <span
                     className={`w-2 h-2 rounded-full ${
-                      agent.status === 'online'
+                      agent.providerOnline === true
                         ? 'bg-[hsl(153_46%_49%)]'
-                        : agent.status === 'idle'
-                          ? 'bg-[hsl(38_100%_58%)]'
+                        : agent.providerOnline === false
+                          ? 'bg-[hsl(0_56%_48%)]'
                           : 'bg-[hsl(210_6%_40%)]'
                     }`}
                   />
@@ -121,9 +140,16 @@ export function HostInfoView({ hostId }: { hostId: string }) {
                     {agent.name}
                   </span>
                 </div>
-                <span className="text-xs font-mono text-[hsl(210_8%_65%)]">
-                  {agent.model}
-                </span>
+                <div className="flex items-center gap-2">
+                  {agent.provider && (
+                    <span className="text-[10px] font-mono text-[hsl(210_8%_50%)] bg-[hsl(208_25%_14%)] px-1.5 py-0.5 rounded">
+                      {agent.provider}
+                    </span>
+                  )}
+                  <span className="text-xs font-mono text-[hsl(210_8%_65%)]">
+                    {agent.model}
+                  </span>
+                </div>
               </div>
             ))}
           </div>

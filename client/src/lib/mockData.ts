@@ -6,12 +6,12 @@ export const mockHosts: HostInfo[] = [
     hostname: 'Pietro-MacBook-Pro',
     connectedAt: new Date(Date.now() - 3600000 * 2).toISOString(),
     lastHeartbeat: new Date(Date.now() - 5000).toISOString(),
-    ollamaVersion: '0.9.2',
+    providers: [{ name: 'ollama', version: '0.9.2' }],
     status: 'online',
     models: [
-      { name: 'llama3.2:3b', size: 2036203520 },
-      { name: 'phi3:3.8b', size: 2217685504 },
-      { name: 'mistral:7b', size: 4108837632 },
+      { name: 'llama3.2:3b', size: 2036203520, provider: 'ollama' },
+      { name: 'phi3:3.8b', size: 2217685504, provider: 'ollama' },
+      { name: 'mistral:7b', size: 4108837632, provider: 'ollama' },
     ],
   },
   {
@@ -19,11 +19,11 @@ export const mockHosts: HostInfo[] = [
     hostname: 'dev-linux-box',
     connectedAt: new Date(Date.now() - 3600000 * 8).toISOString(),
     lastHeartbeat: new Date(Date.now() - 30000).toISOString(),
-    ollamaVersion: '0.8.5',
+    providers: [{ name: 'ollama', version: '0.8.5' }],
     status: 'online',
     models: [
-      { name: 'qwen2.5:14b', size: 9012676608 },
-      { name: 'codellama:13b', size: 7365826560 },
+      { name: 'qwen2.5:14b', size: 9012676608, provider: 'ollama' },
+      { name: 'codellama:13b', size: 7365826560, provider: 'ollama' },
     ],
   },
   {
@@ -31,9 +31,9 @@ export const mockHosts: HostInfo[] = [
     hostname: 'raspberry-pi',
     connectedAt: new Date(Date.now() - 3600000 * 24).toISOString(),
     lastHeartbeat: new Date(Date.now() - 3600000 * 1.5).toISOString(),
-    ollamaVersion: '0.7.1',
+    providers: [{ name: 'ollama', version: '0.7.1' }],
     status: 'offline',
-    models: [{ name: 'llama3.2:1b', size: 1339369536 }],
+    models: [{ name: 'llama3.2:1b', size: 1339369536, provider: 'ollama' }],
   },
 ]
 
