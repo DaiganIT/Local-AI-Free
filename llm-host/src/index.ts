@@ -6,6 +6,7 @@ import { WebSocket } from "ws";
 import os from "os";
 import { autoDiscoverProviders, fetchAllModels } from "./providers/discovery.js";
 import type { ModelInfo } from "./providers/types.js";
+import { initProviderRegistry, findProviderForModel } from "./providers/provider-registry.js";
 import { buildRegisterMessage } from "./protocol.js";
 import { createHeartbeat } from "./heartbeat.js";
 import { handleMessage } from "./messageHandler.js";
@@ -49,6 +50,9 @@ async function connect(): Promise<void> {
   const { providers, meta: providerMeta } = await autoDiscoverProviders();
   const models = await fetchAllModels(providers);
   cachedModels = models;
+
+  // Register provider→model lookup for message routing
+  initProviderRegistry(providers, models);
 
   console.log(`[host] Providers: ${providers.map((p) => p.name).join(", ") || "(none)"}`);
   console.log(`[host] Connecting to ${SERVER_URL} as "${hostname}"…`);
@@ -96,6 +100,7 @@ async function connect(): Promise<void> {
           wchatDb,
           chatResponse: runAgent,
           contextLengthFor,
+          findProviderForModel,
           agentFolderBasePath: process.env.AGENT_FOLDER_BASE_PATH,
           tracker,
         }).catch((err) => {

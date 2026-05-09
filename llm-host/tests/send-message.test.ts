@@ -10,6 +10,7 @@ import { mkdirSync, writeFileSync, readFileSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
 import { readConfinedFileBase64 } from "../src/handlers/file-confinement.js";
+import type { ProviderLookup } from "../src/providers/provider-registry.js";
 
 vi.mock("fs", async (importOriginal) => {
   const actual = await importOriginal<typeof import("fs")>();
@@ -1266,5 +1267,163 @@ describe("send-message", () => {
     const deltaAgentIds = deltas.map((m) => (m as any).event.agentId);
     expect(deltaAgentIds).toContain(agent1.id);
     expect(deltaAgentIds).toContain(agent2.id);
+  });
+
+  describe("provider routing via findProviderForModel", () => {
+    it("routes to provider returned by findProviderForModel", async () => {
+      const agent = db.createAgent({ name: "MLX Agent", model: "mlx-Qwen3-35B" });
+      const findProviderForModel = vi.fn().mockReturnValue({
+        provider: "mlx",
+        baseUrl: "http://localhost:11435",
+      });
+      chatResponse.mockResolvedValue({ content: "MLX response!", promptTokens: 5, completionTokens: 3 });
+
+      const result: unknown[] = [];
+      const send = (data: unknown) => result.push(data);
+
+      await handleRequest({
+        action: "send-message",
+        payload: { agentId: agent.id, prompt: "hello" },
+        id: "route-1",
+        send,
+        db,
+        chatDb,
+        chatResponse,
+        findProviderForModel,
+      });
+
+      expect(findProviderForModel).toHaveBeenCalledWith("mlx-Qwen3-35B");
+      expect(chatResponse).toHaveBeenCalledWith(
+        expect.objectContaining({
+          provider: "mlx",
+          baseUrl: "http://localhost:11435",
+        }),
+      );
+      const response = result[0] as Record<string, unknown>;
+      expect((response.data as Record<string, unknown>).response).toBe("MLX response!");
+    });
+
+    it("defaults to ollama when findProviderForModel returns undefined", async () => {
+      const agent = db.createAgent({ name: "Unknown Agent", model: "unknown-model" });
+      const findProviderForModel = vi.fn().mockReturnValue(undefined);
+      chatResponse.mockResolvedValue({ content: "Fallback!", promptTokens: 5, completionTokens: 3 });
+
+      const result: unknown[] = [];
+      const send = (data: unknown) => result.push(data);
+
+      await handleRequest({
+        action: "send-message",
+        payload: { agentId: agent.id, prompt: "hello" },
+        id: "route-2",
+        send,
+        db,
+        chatDb,
+        chatResponse,
+        findProviderForModel,
+      });
+
+      expect(findProviderForModel).toHaveBeenCalledWith("unknown-model");
+      expect(chatResponse).toHaveBeenCalledWith(
+        expect.objectContaining({
+          provider: "ollama",
+          baseUrl: process.env.OLLAMA_HOST ?? "http://localhost:11434",
+        }),
+      );
+    });
+
+    it("routes workspace message to provider returned by findProviderForModel", async () => {
+      const agent = db.createAgent({ name: "MLX Agent", model: "mlx-Qwen3-35B" });
+      const ws = wdb.createWorkspace({ name: "Team" });
+      const chat = wchatDb.createChat({ workspaceId: ws.id });
+      const findProviderForModel = vi.fn().mockReturnValue({
+        provider: "mlx",
+        baseUrl: "http://localhost:11435",
+      });
+      chatResponse.mockResolvedValue({ content: "MLX reply!", promptTokens: 5, completionTokens: 3 });
+
+      await handleRequest({
+        action: "send-workspace-message",
+        payload: { workspaceChatId: chat.id, prompt: "hello", agentIds: [agent.id] },
+        id: "ws-route-1",
+        send: () => {},
+        db,
+        chatResponse,
+        wdb,
+        wchatDb,
+        findProviderForModel,
+      });
+
+      expect(findProviderForModel).toHaveBeenCalledWith("mlx-Qwen3-35B");
+      expect(chatResponse).toHaveBeenCalledWith(
+        expect.objectContaining({
+          provider: "mlx",
+          baseUrl: "http://localhost:11435",
+        }),
+      );
+    });
+
+    it("defaults workspace message to ollama when findProviderForModel returns undefined", async () => {
+      const agent = db.createAgent({ name: "Unknown Agent", model: "unknown-model" });
+      const ws = wdb.createWorkspace({ name: "Team" });
+      const chat = wchatDb.createChat({ workspaceId: ws.id });
+      const findProviderForModel = vi.fn().mockReturnValue(undefined);
+      chatResponse.mockResolvedValue({ content: "Fallback!", promptTokens: 5, completionTokens: 3 });
+
+      await handleRequest({
+        action: "send-workspace-message",
+        payload: { workspaceChatId: chat.id, prompt: "hello", agentIds: [agent.id] },
+        id: "ws-route-2",
+        send: () => {},
+        db,
+        chatResponse,
+        wdb,
+        wchatDb,
+        findProviderForModel,
+      });
+
+      expect(findProviderForModel).toHaveBeenCalledWith("unknown-model");
+      expect(chatResponse).toHaveBeenCalledWith(
+        expect.objectContaining({
+          provider: "ollama",
+          baseUrl: process.env.OLLAMA_HOST ?? "http://localhost:11434",
+        }),
+      );
+    });
+
+    it("routes each multi-agent workspace message to its own provider", async () => {
+      const agent1 = db.createAgent({ name: "Ollama Agent", model: "qwen3:8b" });
+      const agent2 = db.createAgent({ name: "MLX Agent", model: "mlx-Qwen3-35B" });
+      const ws = wdb.createWorkspace({ name: "Team" });
+      const chat = wchatDb.createChat({ workspaceId: ws.id });
+
+      const findProviderForModel = vi.fn().mockImplementation((name: string): ProviderLookup | undefined => {
+        if (name === "qwen3:8b") return { provider: "ollama", baseUrl: "http://localhost:11434" };
+        if (name === "mlx-Qwen3-35B") return { provider: "mlx", baseUrl: "http://localhost:11435" };
+        return undefined;
+      });
+
+      chatResponse
+        .mockResolvedValueOnce({ content: "Ollama reply!", promptTokens: 10, completionTokens: 5 })
+        .mockResolvedValueOnce({ content: "MLX reply!", promptTokens: 20, completionTokens: 10 });
+
+      await handleRequest({
+        action: "send-workspace-message",
+        payload: { workspaceChatId: chat.id, prompt: "discuss", agentIds: [agent1.id, agent2.id] },
+        id: "ws-route-3",
+        send: () => {},
+        db,
+        chatResponse,
+        wdb,
+        wchatDb,
+        findProviderForModel,
+      });
+
+      // First call = agent1 (ollama), second call = agent2 (mlx) — order depends on Promise.allSettled
+      const calls = chatResponse.mock.calls.map((c: any) => c[0]);
+      const ollamaCall = calls.find((c: any) => c.modelId === "qwen3:8b");
+      const mlxCall = calls.find((c: any) => c.modelId === "mlx-Qwen3-35B");
+      expect(ollamaCall).toMatchObject({ provider: "ollama", baseUrl: "http://localhost:11434" });
+      expect(mlxCall).toMatchObject({ provider: "mlx", baseUrl: "http://localhost:11435" });
+    });
   });
 });

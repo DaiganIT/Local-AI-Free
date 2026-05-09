@@ -10,7 +10,7 @@ import type { ModelInfo, ModelProvider } from "./types.js";
  */
 export class LmStudioProvider implements ModelProvider {
   readonly name = "lm-studio";
-  private readonly baseUrl: string;
+  readonly baseUrl: string;
 
   constructor(baseUrl?: string) {
     this.baseUrl =

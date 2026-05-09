@@ -15,13 +15,63 @@ import {
   createFindTool,
   createLsTool,
 } from "@mariozechner/pi-coding-agent";
-import type { ImageContent } from "@mariozechner/pi-ai";
+import type { ImageContent, Model } from "@mariozechner/pi-ai";
 import { registerOllamaApi, createOllamaModel } from "./providers/ollama.js";
+import { registerOmlxApi, createOmlxModel } from "./providers/omlx.js";
+import { createOpenAIModel } from "./providers/openai-models.js";
 import { createWriteAgentsMdTool } from "./tools/write-agents-md.js";
 import { createReadAttachmentTool } from "./tools/read-attachment.js";
 
-// Register once at module load
+// Register Ollama & Omlx APIs once at module load
 registerOllamaApi();
+registerOmlxApi();
+
+// ── Model Factory Registry ────────────────────────────────────────────
+
+/** Common options for creating a model via a factory. */
+export interface ModelFactoryOptions {
+  id: string;
+  baseUrl: string;
+  provider?: string;
+  contextWindow?: number;
+  maxTokens?: number;
+  reasoning?: boolean;
+}
+
+type ModelFactory = (opts: ModelFactoryOptions) => Model<string>;
+
+const modelFactories = new Map<string, ModelFactory>();
+
+/**
+ * Register a provider-specific model factory.
+ * When runAgent encounters a provider name that matches,
+ * it uses this factory instead of the generic OpenAI-compat fallback.
+ */
+export function registerModelFactory(providerName: string, factory: ModelFactory): void {
+  modelFactories.set(providerName, factory);
+}
+
+/** Clear all registered model factories (for testing). */
+export function clearModelFactories(): void {
+  modelFactories.clear();
+}
+
+// Register built-in ollama & omlx factories at module level
+registerModelFactory("ollama", (opts) =>
+  createOllamaModel({
+    id: opts.id,
+    baseUrl: opts.baseUrl,
+    contextWindow: opts.contextWindow ?? 0,
+  }),
+);
+
+registerModelFactory("omlx", (opts) =>
+  createOmlxModel({
+    id: opts.id,
+    baseUrl: opts.baseUrl,
+    contextWindow: opts.contextWindow ?? 0,
+  }),
+);
 
 /** Valid pi built-in tool names */
 const VALID_TOOL_NAMES = ["read", "bash", "edit", "write", "grep", "find", "ls"] as const;
@@ -54,6 +104,13 @@ export interface AgentRunInput {
   modelId: string;
   /** Ollama base URL (defaults to process.env.OLLAMA_HOST). */
   baseUrl: string;
+  /**
+   * Provider name for routing. When "ollama" (or omitted),
+   * uses Ollama's native `/api/chat` endpoint. When any other
+   * provider name ("mlx", "omlx", "lm-studio"), uses the
+   * OpenAI-compatible `/v1/chat/completions` endpoint.
+   */
+  provider?: string;
   /** System prompt for this run. */
   systemPrompt: string;
   /** Ollama model context window (for thinking budget hints). */
@@ -136,11 +193,21 @@ function estimateReasoningTokens(
 export async function runAgent(input: AgentRunInput): Promise<AgentRunResult> {
   const { modelId, baseUrl, systemPrompt, prompt, messages, contextWindow } = input;
 
-  const model = createOllamaModel({
-    id: modelId,
-    baseUrl,
-    contextWindow: contextWindow ?? 0,
-  });
+  // Look up provider-specific factory; fall back to generic OpenAI-compat
+  const factory = input.provider ? modelFactories.get(input.provider) : undefined;
+  const model = factory
+    ? factory({
+        id: modelId,
+        baseUrl,
+        provider: input.provider,
+        contextWindow: contextWindow ?? 0,
+      })
+    : createOpenAIModel({
+        id: modelId,
+        baseUrl,
+        provider: input.provider,
+        contextWindow: contextWindow ?? 0,
+      });
 
   // Build tools array
   const tools: any[] = [];

@@ -4,6 +4,7 @@ import type { WorkspaceChatsDb, WorkspaceMessageRow } from "../workspace-chats-d
 import type { AgentRunInput, AgentRunResult } from "../agent-runner.js";
 import type { StreamEvent } from "../protocol.js";
 import type { RequestTracker } from "../request-tracker.js";
+import type { ProviderLookup } from "../providers/provider-registry.js";
 import { validateRequired } from "../utils.js";
 import { sendResponse } from "../send-response.js";
 import { stripThinking, buildSystemPrompt, buildAttachmentHint, buildImageContents, resolveUploadsDir } from "./agent-prompt.js";
@@ -36,6 +37,7 @@ export async function handleSendWorkspaceMessage(
   wchatDb: WorkspaceChatsDb | undefined,
   chatResponse: (input: AgentRunInput) => Promise<AgentRunResult>,
   contextLengthFor: ((model: string) => number | undefined) | undefined,
+  findProviderForModel: ((modelName: string) => ProviderLookup | undefined) | undefined,
   agentFolderBasePath?: string,
   wdb?: WorkspacesDb,
   tracker?: RequestTracker,
@@ -150,9 +152,18 @@ export async function handleSendWorkspaceMessage(
       // Each agent gets the same conversation history (no other agents' responses)
       const agentMessages = [...conversationMessages];
 
+      const providerLookup = findProviderForModel?.(agent.model);
+      const effectiveProvider = providerLookup?.provider ?? "ollama";
+      const effectiveBaseUrl = providerLookup?.baseUrl ?? (process.env.OLLAMA_HOST ?? "http://localhost:11434");
+
+      if (!providerLookup) {
+        console.warn(`[send-workspace-message] No provider found for model "${agent.model}", defaulting to ollama`);
+      }
+
       const agentInput: AgentRunInput = {
         modelId: agent.model,
-        baseUrl: process.env.OLLAMA_HOST ?? "http://localhost:11434",
+        baseUrl: effectiveBaseUrl,
+        provider: effectiveProvider,
         systemPrompt,
         contextWindow: contextLengthFor?.(agent.model),
         messages: agentMessages,

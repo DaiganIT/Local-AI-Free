@@ -21,7 +21,7 @@ function extractContextLength(modelInfo: Record<string, unknown>): number | unde
  */
 export class OllamaProvider implements ModelProvider {
   readonly name = "ollama";
-  private readonly baseUrl: string;
+  public readonly baseUrl: string;
 
   constructor(baseUrl?: string) {
     this.baseUrl = baseUrl ?? process.env.OLLAMA_HOST ?? "http://localhost:11434";

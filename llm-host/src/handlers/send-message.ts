@@ -3,6 +3,7 @@ import type { ChatDb } from "../chat-db.js";
 import type { AgentRunInput, AgentRunResult } from "../agent-runner.js";
 import type { StreamEvent } from "../protocol.js";
 import type { RequestTracker } from "../request-tracker.js";
+import type { ProviderLookup } from "../providers/provider-registry.js";
 import { validateRequired } from "../utils.js";
 import { sendResponse } from "../send-response.js";
 import { stripThinking, buildSystemPrompt, buildAttachmentHint, buildImageContents, resolveUploadsDir } from "./agent-prompt.js";
@@ -18,6 +19,7 @@ export async function handleSendMessage(
   chatDb: ChatDb | undefined,
   chatResponse: (input: AgentRunInput) => Promise<AgentRunResult>,
   contextLengthFor: ((model: string) => number | undefined) | undefined,
+  findProviderForModel: ((modelName: string) => ProviderLookup | undefined) | undefined,
   agentFolderBasePath?: string,
   tracker?: RequestTracker,
 ): Promise<void> {
@@ -100,10 +102,19 @@ export async function handleSendMessage(
     const imageContents = uploadsDir ? buildImageContents(attachments, uploadsDir) : [];
     const images = imageContents.length > 0 ? imageContents : undefined;
 
+    const providerLookup = findProviderForModel?.(agent.model);
+    const effectiveProvider = providerLookup?.provider ?? "ollama";
+    const effectiveBaseUrl = providerLookup?.baseUrl ?? (process.env.OLLAMA_HOST ?? "http://localhost:11434");
+
+    if (!providerLookup) {
+      console.warn(`[send-message] No provider found for model "${agent.model}", defaulting to ollama`);
+    }
+
     const abortController = new AbortController();
     const agentInput: AgentRunInput = {
       modelId: agent.model,
-      baseUrl: process.env.OLLAMA_HOST ?? "http://localhost:11434",
+      baseUrl: effectiveBaseUrl,
+      provider: effectiveProvider,
       systemPrompt,
       contextWindow: contextLengthFor?.(agent.model),
       messages: conversationMessages as Array<{ role: "user" | "assistant"; content: string }>,

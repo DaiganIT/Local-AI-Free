@@ -4,6 +4,7 @@ import type { WorkspacesDb } from "./workspaces-db.js";
 import type { WorkspaceChatsDb } from "./workspace-chats-db.js";
 import type { AgentRunInput, AgentRunResult } from "./agent-runner.js";
 import type { RequestTracker } from "./request-tracker.js";
+import type { ProviderLookup } from "./providers/provider-registry.js";
 import { sendResponse } from "./send-response.js";
 import { handleCreateAgent, handleListAgents, handleDeleteAgent, handleListAgentFolder, handleGetAgentInstructions, handleReadAgentFile, handleWriteAgentFile, handleDeleteAgentFile } from "./handlers/agent-handlers.js";
 import { handleCreateChat, handleListChats, handleGetChat, handleDeleteChat } from "./handlers/chat-handlers.js";
@@ -24,6 +25,7 @@ export interface RequestInput {
   wchatDb?: WorkspaceChatsDb;
   chatResponse: (input: AgentRunInput) => Promise<AgentRunResult>;
   contextLengthFor?: (model: string) => number | undefined;
+  findProviderForModel?: (modelName: string) => ProviderLookup | undefined;
   agentFolderBasePath?: string;
   tracker?: RequestTracker;
 }
@@ -41,7 +43,7 @@ export async function handleRequest(input: RequestInput): Promise<void> {
       break;
 
     case "send-message":
-      await handleSendMessage(payload, id, send, db, chatDb, chatResponse, input.contextLengthFor, input.agentFolderBasePath, input.tracker);
+      await handleSendMessage(payload, id, send, db, chatDb, chatResponse, input.contextLengthFor, input.findProviderForModel, input.agentFolderBasePath, input.tracker);
       break;
 
     case "create-chat":
@@ -123,7 +125,7 @@ export async function handleRequest(input: RequestInput): Promise<void> {
       break;
 
     case "send-workspace-message":
-      await handleSendWorkspaceMessage(payload, id, send, input.db, input.wchatDb, input.chatResponse, input.contextLengthFor, input.agentFolderBasePath, input.wdb, input.tracker);
+      await handleSendWorkspaceMessage(payload, id, send, input.db, input.wchatDb, input.chatResponse, input.contextLengthFor, input.findProviderForModel, input.agentFolderBasePath, input.wdb, input.tracker);
       break;
 
     case "create-workspace-chat":

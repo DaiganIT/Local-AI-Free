@@ -90,6 +90,7 @@ describe("agent-runner integration (real Agent + mocked fetch)", () => {
       systemPrompt: "You are helpful.",
       prompt: "Say hello!",
       messages: [],
+      provider: "ollama",
     });
 
     expect(result.content).toBe("Hello!");
@@ -119,6 +120,7 @@ describe("agent-runner integration (real Agent + mocked fetch)", () => {
         { role: "assistant", content: "First answer" },
         { role: "user", content: "Second question" },
       ],
+      provider: "ollama",
     });
 
     const fetchCall = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
@@ -155,6 +157,7 @@ describe("agent-runner integration (real Agent + mocked fetch)", () => {
       systemPrompt: "You are helpful.",
       prompt: "What is 6*7?",
       messages: [],
+      provider: "ollama",
     });
 
     // Should only contain text, not thinking
@@ -179,6 +182,7 @@ describe("agent-runner integration (real Agent + mocked fetch)", () => {
       systemPrompt: "System",
       prompt: "Fail please",
       messages: [],
+      provider: "ollama",
     });
 
     // Agent stores error in state but returns empty result
@@ -198,6 +202,7 @@ describe("agent-runner integration (real Agent + mocked fetch)", () => {
       systemPrompt: "System",
       prompt: "Network error",
       messages: [],
+      provider: "ollama",
     });
 
     expect(result.content).toBe("");
@@ -222,6 +227,7 @@ describe("agent-runner integration (real Agent + mocked fetch)", () => {
       systemPrompt: "You are a pirate assistant.",
       prompt: "Hello",
       messages: [],
+      provider: "ollama",
     });
 
     const fetchCall = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];

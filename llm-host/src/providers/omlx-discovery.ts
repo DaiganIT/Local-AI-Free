@@ -11,7 +11,7 @@ import type { ModelInfo, ModelProvider } from "./types.js";
  */
 export class OmlxProvider implements ModelProvider {
   readonly name = "omlx";
-  private readonly baseUrl: string;
+  readonly baseUrl: string;
   private readonly apiKey: string | undefined;
 
   constructor(baseUrl?: string, apiKey?: string) {

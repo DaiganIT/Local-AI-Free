@@ -14,7 +14,10 @@ export interface ModelInfo {
  * reachable=false and models() returns an empty array.
  */
 export interface ModelProvider {
+  /** Unique provider name (e.g. "ollama", "mlx", "omlx", "lm-studio"). */
   name: string;
+  /** Base URL for this provider's API (e.g. "http://localhost:11434"). */
+  baseUrl: string;
   version(): Promise<{ version: string; reachable: boolean }>;
   models(): Promise<ModelInfo[]>;
 }

@@ -1,7 +1,10 @@
 import { join } from "node:path";
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { runAgent, resolveTools } from "../src/agent-runner.js";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { runAgent, resolveTools, registerModelFactory, clearModelFactories } from "../src/agent-runner.js";
 import type { Agent } from "@mariozechner/pi-agent-core";
+import { createOllamaModel } from "../src/providers/ollama.js";
+import { createOmlxModel } from "../src/providers/omlx.js";
+import { createOpenAIModel } from "../src/providers/openai-models.js";
 
 // Mock pi-agent-core's Agent class and its constructor
 const mockSubscribe = vi.fn();
@@ -45,6 +48,38 @@ vi.mock("../src/providers/ollama.js", () => ({
     api: "ollama",
     provider: "ollama",
     baseUrl: "http://localhost:11434",
+    reasoning: true,
+    input: ["text"] as const,
+    cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+    contextWindow: 4096,
+    maxTokens: 32000,
+  })),
+}));
+
+vi.mock("../src/providers/omlx.js", () => ({
+  registerOmlxApi: vi.fn(),
+  createOmlxModel: vi.fn(() => ({
+    id: "test-model",
+    name: "test-model",
+    api: "omlx",
+    provider: "omlx",
+    baseUrl: "http://localhost:8000",
+    reasoning: true,
+    input: ["text"] as const,
+    cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+    contextWindow: 4096,
+    maxTokens: 32000,
+  })),
+}));
+
+// Mock openai-models factory
+vi.mock("../src/providers/openai-models.js", () => ({
+  createOpenAIModel: vi.fn(() => ({
+    id: "test-model",
+    name: "test-model",
+    api: "openai-completions",
+    provider: "mlx",
+    baseUrl: "http://localhost:11435",
     reasoning: true,
     input: ["text"] as const,
     cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
@@ -388,7 +423,6 @@ describe("runAgent", () => {
   });
 
   it("uses the contextWindow parameter for model config", async () => {
-    const { createOllamaModel } = await import("../src/providers/ollama.js");
     pushMinimalAssistant();
 
     await runAgent({
@@ -398,10 +432,109 @@ describe("runAgent", () => {
       prompt: "Hi",
       messages: [],
       contextWindow: 8192,
+      provider: "ollama",
     });
 
     expect(createOllamaModel).toHaveBeenCalledWith(
       expect.objectContaining({ contextWindow: 8192 }),
+    );
+  });
+
+  it("creates an Ollama model when provider is \"ollama\"", async () => {
+    pushMinimalAssistant();
+
+    await runAgent({
+      modelId: "qwen3:8b",
+      baseUrl: "http://localhost:11434",
+      systemPrompt: "You are helpful.",
+      prompt: "Hi",
+      messages: [],
+      provider: "ollama",
+    });
+
+    expect(createOllamaModel).toHaveBeenCalled();
+  });
+
+  it("creates an OpenAI model when provider is \"mlx\"", async () => {
+    pushMinimalAssistant();
+
+    await runAgent({
+      modelId: "mlx-Qwen3-35B-A3B-4bit",
+      baseUrl: "http://localhost:11435",
+      systemPrompt: "You are helpful.",
+      prompt: "Hi",
+      messages: [],
+      provider: "mlx",
+    });
+
+    expect(createOpenAIModel).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "mlx-Qwen3-35B-A3B-4bit",
+        baseUrl: "http://localhost:11435",
+        provider: "mlx",
+        contextWindow: 0,
+      }),
+    );
+  });
+
+  it("falls back to createOpenAIModel when provider is omitted (no default)", async () => {
+    pushMinimalAssistant();
+
+    await runAgent({
+      modelId: "qwen3:8b",
+      baseUrl: "http://localhost:11434",
+      systemPrompt: "You are helpful.",
+      prompt: "Hi",
+      messages: [],
+    });
+
+    // When provider is undefined and no factory matches, falls back to OpenAI-compat
+    expect(createOpenAIModel).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "qwen3:8b",
+        baseUrl: "http://localhost:11434",
+      }),
+    );
+  });
+
+  it("creates an Omlx model when provider is \"omlx\"", async () => {
+    pushMinimalAssistant();
+
+    await runAgent({
+      modelId: "omlx-model",
+      baseUrl: "http://localhost:8000",
+      systemPrompt: "You are helpful.",
+      prompt: "Hi",
+      messages: [],
+      provider: "omlx",
+    });
+
+    expect(createOmlxModel).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "omlx-model",
+        baseUrl: "http://localhost:8000",
+      }),
+    );
+  });
+
+  it("creates an OpenAI model when provider is \"lm-studio\"", async () => {
+    pushMinimalAssistant();
+
+    await runAgent({
+      modelId: "lmstudio-model",
+      baseUrl: "http://localhost:1234",
+      systemPrompt: "You are helpful.",
+      prompt: "Hi",
+      messages: [],
+      provider: "lm-studio",
+    });
+
+    expect(createOpenAIModel).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "lmstudio-model",
+        baseUrl: "http://localhost:1234",
+        provider: "lm-studio",
+      }),
     );
   });
 
@@ -896,5 +1029,220 @@ describe("runAgent abort signal", () => {
 
     expect(result.content).toBe("");
     expect(result.aborted).toBe(true);
+  });
+});
+
+// ── Model Factory Registry ──────────────────────────────────────────────
+
+describe("model factory registry", () => {
+  const customFactory = vi.fn(() => ({
+    id: "custom-model",
+    name: "custom-model",
+    api: "custom",
+    provider: "custom",
+    baseUrl: "http://localhost:9999",
+    reasoning: true,
+    input: ["text"] as const,
+    cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+    contextWindow: 8192,
+    maxTokens: 4096,
+  }));
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockAgent.state.messages = [];
+    mockAgent.prompt.mockResolvedValue(undefined);
+    mockAgent.waitForIdle.mockResolvedValue(undefined);
+    mockSubscribe.mockReset();
+    // Reset the registry for each test
+    clearModelFactories();
+  });
+
+  afterEach(() => {
+    // Restore the ollama factory so other describe blocks aren't affected
+    clearModelFactories();
+    registerModelFactory("ollama", (opts) => createOllamaModel({
+      id: opts.id,
+      baseUrl: opts.baseUrl,
+      contextWindow: opts.contextWindow ?? 0,
+    }));
+  });
+
+  function pushMinimalAssistant() {
+    mockAgent.state.messages.push({
+      role: "assistant",
+      content: [{ type: "text", text: "ok" }],
+      usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } },
+      stopReason: "stop",
+      timestamp: Date.now(),
+    });
+  }
+
+  it("uses registered factory when provider matches", async () => {
+    registerModelFactory("custom", customFactory);
+    pushMinimalAssistant();
+
+    await runAgent({
+      modelId: "custom-model",
+      baseUrl: "http://localhost:9999",
+      systemPrompt: "You are helpful.",
+      prompt: "Hi",
+      messages: [],
+      provider: "custom",
+    });
+
+    expect(customFactory).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "custom-model",
+        baseUrl: "http://localhost:9999",
+        provider: "custom",
+        contextWindow: 0,
+      }),
+    );
+    // Should NOT call createOpenAIModel
+    expect(createOpenAIModel).not.toHaveBeenCalled();
+  });
+
+  it("falls back to createOpenAIModel when provider has no registered factory", async () => {
+    // Only register "custom", not "mlx"
+    registerModelFactory("custom", customFactory);
+    pushMinimalAssistant();
+
+    await runAgent({
+      modelId: "mlx-model",
+      baseUrl: "http://localhost:11435",
+      systemPrompt: "You are helpful.",
+      prompt: "Hi",
+      messages: [],
+      provider: "mlx",
+    });
+
+    expect(createOpenAIModel).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "mlx-model",
+        baseUrl: "http://localhost:11435",
+        provider: "mlx",
+      }),
+    );
+  });
+
+  it("falls back to createOpenAIModel when provider is undefined and registry is empty", async () => {
+    pushMinimalAssistant();
+
+    await runAgent({
+      modelId: "some-model",
+      baseUrl: "http://localhost:11434",
+      systemPrompt: "You are helpful.",
+      prompt: "Hi",
+      messages: [],
+      // provider intentionally omitted
+    });
+
+    expect(createOpenAIModel).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "some-model",
+        baseUrl: "http://localhost:11434",
+      }),
+    );
+  });
+
+  it("uses ollama factory when registered and provider is ollama", async () => {
+    registerModelFactory("ollama", (opts) => createOllamaModel({
+      id: opts.id,
+      baseUrl: opts.baseUrl,
+      contextWindow: opts.contextWindow ?? 0,
+    }));
+    pushMinimalAssistant();
+
+    await runAgent({
+      modelId: "qwen3:8b",
+      baseUrl: "http://localhost:11434",
+      systemPrompt: "You are helpful.",
+      prompt: "Hi",
+      messages: [],
+      provider: "ollama",
+    });
+
+    expect(createOllamaModel).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "qwen3:8b",
+        baseUrl: "http://localhost:11434",
+        contextWindow: 0,
+      }),
+    );
+    expect(createOpenAIModel).not.toHaveBeenCalled();
+  });
+
+  it("passes contextWindow and provider to factory", async () => {
+    registerModelFactory("custom", customFactory);
+    pushMinimalAssistant();
+
+    await runAgent({
+      modelId: "custom-model",
+      baseUrl: "http://localhost:9999",
+      systemPrompt: "You are helpful.",
+      prompt: "Hi",
+      messages: [],
+      provider: "custom",
+      contextWindow: 65536,
+    });
+
+    expect(customFactory).toHaveBeenCalledWith(
+      expect.objectContaining({
+        contextWindow: 65536,
+        provider: "custom",
+      }),
+    );
+  });
+
+  it("can register multiple factories", async () => {
+    const ollamaFactory = vi.fn(() => ({
+      id: "ollama-model", api: "ollama", provider: "ollama", baseUrl: "http://localhost:11434",
+      reasoning: true, input: ["text"] as const, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+      contextWindow: 0, maxTokens: 32000, name: "ollama-model",
+    }));
+    registerModelFactory("ollama", ollamaFactory);
+    registerModelFactory("custom", customFactory);
+    pushMinimalAssistant();
+
+    await runAgent({
+      modelId: "qwen3:8b",
+      baseUrl: "http://localhost:11434",
+      systemPrompt: "You are helpful.",
+      prompt: "Hi",
+      messages: [],
+      provider: "ollama",
+    });
+
+    expect(ollamaFactory).toHaveBeenCalled();
+    expect(customFactory).not.toHaveBeenCalled();
+  });
+
+  it("clearModelFactories removes all registrations", async () => {
+    registerModelFactory("ollama", (opts) => createOllamaModel({
+      id: opts.id,
+      baseUrl: opts.baseUrl,
+      contextWindow: opts.contextWindow ?? 0,
+    }));
+    pushMinimalAssistant();
+
+    // Clear all — now even "ollama" should fall back to openai
+    clearModelFactories();
+
+    await runAgent({
+      modelId: "qwen3:8b",
+      baseUrl: "http://localhost:11434",
+      systemPrompt: "You are helpful.",
+      prompt: "Hi",
+      messages: [],
+      provider: "ollama",
+    });
+
+    expect(createOpenAIModel).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "qwen3:8b",
+        provider: "ollama",
+      }),
+    );
   });
 });

@@ -6,7 +6,7 @@ import type { ModelInfo, ModelProvider } from "./types.js";
  */
 export class MlxProvider implements ModelProvider {
   readonly name = "mlx";
-  private readonly baseUrl: string;
+  readonly baseUrl: string;
 
   constructor(baseUrl?: string) {
     this.baseUrl = baseUrl ?? process.env.MLX_HOST ?? "http://localhost:11435";
