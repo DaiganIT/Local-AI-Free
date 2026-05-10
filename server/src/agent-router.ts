@@ -1,9 +1,3 @@
-import { EventEmitter } from "events";
-
-export type RpcSocket = {
-  send(data: string): void;
-} & EventEmitter;
-
 interface RequestEntry {
   resolve: (value: unknown) => void;
   reject: (error: Error) => void;
@@ -29,8 +23,14 @@ export interface StreamResult {
   requestId: string;
 }
 
+export interface Socket {
+  send(data: string): void;
+  on(event: string, listener: (...args: unknown[]) => void): void;
+  off(event: string, listener: (...args: unknown[]) => void): void;
+}
+
 export interface AgentRouter {
-  registerHost(hostId: string, socket: RpcSocket): void;
+  registerHost(hostId: string, socket: Socket): void;
   unregisterHost(hostId: string): void;
   request(hostId: string, req: { action: string; payload: unknown }, options?: { timeoutMs?: number }): Promise<unknown>;
   streamRequest(hostId: string, req: { action: string; payload: unknown }, options?: { timeoutMs?: number }): Promise<StreamResult>;
@@ -41,7 +41,7 @@ export interface AgentRouter {
 
 /** Tracks requestId → hostId so we can batch-reject on disconnect. */
 function createAgentRouter(): AgentRouter {
-  const sockets = new Map<string, RpcSocket>();
+  const sockets = new Map<string, Socket>();
   const listeners = new Map<string, (raw: unknown) => void>();
   const pending = new Map<string, RequestEntry>();
   /** Maps requestId → hostId for disconnect handling. */
