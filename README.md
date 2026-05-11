@@ -149,6 +149,21 @@ A React SPA built with TanStack Router and TanStack Query. It provides:
 - Chat interface with streaming responses
 - Workspace file explorer
 
+## What's Next
+
+This project is still very much work in progress — new features and improvements are added every week.
+
+**Where it's headed:**
+
+- Mobile app support so you can connect and use your AI agents from your phone
+- Custom workspaces so all agents in a workspace share the same folder
+- Every agent has its own workspace and stores all files locally
+- Simplified setup compared to existing solutions
+
+**Why I built this:**
+
+Most of my attempts at running local LLMs worked, but fell short because I didn't have access to them from everywhere. Existing solutions like Openclaw were great, but the context used by agents was too heavy and very difficult to set up. This project is an attempt at something easier to use — and accessible from any device.
+
 ## Project Structure
 
 ```
