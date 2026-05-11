@@ -1,4 +1,4 @@
-# Contributing to Local LLM Tinkerer
+# Contributing to Local AI Free
 
 Thanks for your interest in contributing! Here's how to get started.
 
@@ -7,7 +7,7 @@ Thanks for your interest in contributing! Here's how to get started.
 ```bash
 # Clone the repo
 git clone <repo-url>
-cd local-llm-tinkerer
+cd local-ai-free
 
 # Install dependencies for all packages
 npm install
@@ -63,7 +63,7 @@ Tests use [Vitest](https://vitest.dev/). Please write tests for any new features
 ## Project Structure
 
 ```
-local-llm-tinkerer/
+local-ai-free/
 ├── client/          # React web UI (TanStack Router + Query)
 ├── server/          # Express + WebSocket relay
 ├── llm-host/        # Ollama agent daemon

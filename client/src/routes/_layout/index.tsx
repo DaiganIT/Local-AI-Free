@@ -12,7 +12,7 @@ function Welcome() {
         <Bot className="w-10 h-10 text-[hsl(200_85%_55%)]" />
       </div>
       <h2 className="text-xl font-bold text-[hsl(210_13%_95%)] mb-2">
-        Welcome to Local LLM Tinkerer
+        Welcome to Local AI Free
       </h2>
       <p className="text-sm text-[hsl(210_8%_65%)] max-w-sm leading-relaxed">
         Select a host from the left panel, then choose an agent to start

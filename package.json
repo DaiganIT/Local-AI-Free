@@ -1,8 +1,8 @@
 {
-  "name": "local-llm-tinkerer",
+  "name": "local-ai-free",
   "version": "0.1.0",
   "private": true,
-  "description": "A relay-based system that lets a browser client chat with local LLM hosts over the internet",
+  "description": "A relay-based system that lets you chat with local AI models for free, from any device",
   "license": "PolyForm-Noncommercial-1.0.0",
   "workspaces": [
     "server",

@@ -1,7 +1,7 @@
 {
   "name": "llm-tinkerer-server",
   "version": "0.1.0",
-  "description": "Relay server for Local LLM Tinkerer",
+  "description": "Relay server for Local AI Free",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",

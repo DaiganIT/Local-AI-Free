@@ -2,7 +2,7 @@
   "name": "llm-tinkerer-host",
   "version": "0.1.0",
   "type": "module",
-  "description": "LLM host daemon for Local LLM Tinkerer",
+  "description": "AI host daemon for Local AI Free",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",

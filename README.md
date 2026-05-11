@@ -1,17 +1,26 @@
-# Local LLM Tinkerer
+# Local AI Free
 
-A relay-based system that lets you chat with local LLMs (via [Ollama](https://ollama.com)) through a web UI, even from a different machine.
+An open-source relay system that lets you chat with local AI models through a web browser — from any device. No cloud APIs, no subscriptions, completely free.
 
 ```
 ┌──────────┐       ┌───────────┐       ┌──────────┐
-│  Browser │◄─────►│  Server    │◄─────►│ LLM Host │◄──► Ollama
+│  Browser │◄─────►│  Server    │◄─────►│ AI Host  │◄──► AI Model
 │  (React) │  HTTP │  (Relay)   │  WS   │ (Agent)  │
 └──────────┘       └───────────┘       └──────────┘
 ```
 
-- **client/** — React web app (TanStack Router, Vite). Browse hosts, send messages, manage agents.
-- **server/** — Node.js relay (Express + WebSocket). Bridges browser clients and LLM hosts.
-- **llm-host/** — Node.js agent that connects to the server, registers itself, and runs LLM agents via Ollama.
+- **client/** — React web app (TanStack Router, Vite). Browse hosts, send messages, manage AI agents.
+- **server/** — Node.js relay (Express + WebSocket). Bridges browser clients and AI hosts.
+- **llm-host/** — Node.js agent that connects to the server, registers itself, and runs AI agents via Ollama.
+
+## Why Local AI Free?
+
+Cloud AI APIs cost money. Your own hardware is free. Local AI Free lets you:
+
+- Run AI models on your own hardware (no latency, no costs, full privacy)
+- Connect from any device — your phone, tablet, or a different machine
+- Manage multiple AI hosts and their models from a single dashboard
+- Create AI agents that can read files, run code, and perform tasks
 
 ## Prerequisites
 
@@ -23,7 +32,7 @@ A relay-based system that lets you chat with local LLMs (via [Ollama](https://ol
 ```bash
 # Clone the repo
 git clone <repo-url>
-cd local-llm-tinkerer
+cd local-ai-free
 
 # Install dependencies for all packages
 npm install
@@ -31,7 +40,7 @@ npm install
 # 1. Start the relay server
 npm run dev:server
 
-# 2. In another terminal, start the LLM host
+# 2. In another terminal, start the AI host
 npm run dev:host
 
 # 3. In another terminal, start the web client
@@ -55,7 +64,7 @@ cp server/.env.example server/.env
 | `PORT` | `3000` | HTTP + WebSocket port |
 | `SERVER_API_KEYS` | _(none)_ | Comma-separated API keys. If set, clients must send `X-API-Key` header. |
 
-### LLM Host (`llm-host/`)
+### AI Host (`llm-host/`)
 
 ```bash
 cp llm-host/.env.example llm-host/.env
@@ -114,19 +123,19 @@ npm run test:client
 
 ### Server (Relay)
 
-The server is a thin relay between browser clients and LLM hosts. It doesn't run models itself — it:
+The server is a thin relay between browser clients and AI hosts. It doesn't run models — it:
 
-- Maintains a WebSocket connection to each registered LLM host
+- Maintains a WebSocket connection to each registered AI host
 - Exposes a REST API for clients to list hosts, agents, chats, and workspaces
 - Proxies chat and agent requests to the appropriate host via WebSocket
 - Streams responses back to clients via Server-Sent Events (SSE)
 
-### LLM Host
+### AI Host
 
-The host agent runs on the machine that has Ollama installed. It:
+The host agent runs on the machine with your AI models. It:
 
 - Connects to the relay server on startup via WebSocket
-- Registers itself (hostname, Ollama version, available models)
+- Registers itself (hostname, model version, available models)
 - Sends heartbeats with updated model lists
 - Handles incoming requests from the relay (create agent, send message, etc.)
 - Runs the full agent loop using `@mariozechner/pi-agent-core`
@@ -135,7 +144,7 @@ The host agent runs on the machine that has Ollama installed. It:
 
 A React SPA built with TanStack Router and TanStack Query. It provides:
 
-- Host overview (which LLM hosts are connected, what models they have)
+- Host overview (which AI hosts are connected, what models they have)
 - Agent management (create, configure, start, stop)
 - Chat interface with streaming responses
 - Workspace file explorer
@@ -143,10 +152,10 @@ A React SPA built with TanStack Router and TanStack Query. It provides:
 ## Project Structure
 
 ```
-local-llm-tinkerer/
+local-ai-free/
 ├── client/          # React web UI
 ├── server/          # Express + WebSocket relay
-├── llm-host/        # Ollama agent daemon
+├── llm-host/        # AI host daemon
 ├── LICENSE          # PolyForm Noncommercial 1.0.0
 ├── AGENTS.md        # Development guidelines
 ├── PROGRESS.md      # Development progress log

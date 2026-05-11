@@ -4,10 +4,10 @@ This document contains rules and principles that must be followed when working o
 
 ## Project Overview
 
-**Local LLM Tinkerer** — a relay-based system that lets a browser client chat with local LLM hosts over the internet.
+**Local AI Free** — an open-source relay system that lets you chat with local AI models through a web browser — from any device.
 
-- **`client/`** — React web app (TanStack Router, Vite). Users browse available LLM hosts and send messages.
-- **`server/`** — Node.js relay (Express + WebSocket, `ws`). Always-connected bridge between client and llm-hosts.
+- **`client/`** — React web app (TanStack Router, Vite). Users browse available AI hosts and send messages.
+- **`server/`** — Node.js relay (Express + WebSocket, `ws`). Always-connected bridge between client and ai-hosts.
 - **`llm-host/`** — Node.js agent that connects to server at startup, registers itself (hostname, Ollama version, models), and sends heartbeats. Queries local Ollama API for model info.
 
 ## Core Principles
