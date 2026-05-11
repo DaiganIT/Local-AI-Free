@@ -13,7 +13,7 @@ import { getHealth } from "./health.js";
 
 export function createApp(registry: Registry, auth: AuthConfig | undefined, agentRouter: AgentRouter): Express {
   const app = express();
-  app.use(express.json());
+  app.use(express.json({ limit: "50mb" }));
 
   // CORS — allow any origin during dev
   app.use(cors({

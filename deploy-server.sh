@@ -37,9 +37,9 @@ USER_HOST="$3"
 SSH_PORT="${4:-22}"
 
 # ── Config ───────────────────────────────────────────────────────────────────
-SSH_OPTS=(-o StrictHostKeyChecking=accept-new -o BatchMode=yes -i "$SSH_KEY")
+SSH_OPTS=(-o StrictHostKeyChecking=accept-new -i "$SSH_KEY")
 # scp on macOS uses uppercase -P for port (lowercase -p means "preserve timestamps")
-SCP_OPTS=(-o StrictHostKeyChecking=accept-new -o BatchMode=yes -i "$SSH_KEY" -P "$SSH_PORT")
+SCP_OPTS=(-o StrictHostKeyChecking=accept-new -i "$SSH_KEY" -P "$SSH_PORT")
 USE_DOCKER="${USE_DOCKER:-true}"
 DEPLOY_PATH="${DEPLOY_PATH:-~/llm-tinkerer/server}"
 

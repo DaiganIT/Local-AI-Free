@@ -83,6 +83,7 @@ export interface WriteWorkspaceFileRequest {
 export interface UploadAgentFileJsonRequest {
   fileName?: string;
   content?: string;
+  mimeType?: string;
 }
 
 export interface UploadWorkspaceFileJsonRequest {

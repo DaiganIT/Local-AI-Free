@@ -145,6 +145,7 @@ export function createAgentHandlers(deps: AgentDeps) {
       if (body.content === undefined || body.content === null) throw new BadRequestError("missing required field: content");
       fileName = body.fileName;
       content = body.content;
+      mimeType = body.mimeType;
     }
 
     const result = await fanOutToFirstHost(registry, agentRouter, {

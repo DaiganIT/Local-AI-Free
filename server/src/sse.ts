@@ -39,6 +39,11 @@ export async function streamToSse(
   res.setHeader("X-Accel-Buffering", "no"); // disable nginx buffering
   res.flushHeaders();
 
+  // Disable Nagle's algorithm so small SSE writes go out immediately
+  // without waiting for TCP coalescing. Also try the flush method
+  // if available (Node >= 16, some middlewares).
+  res.socket?.setNoDelay(true);
+
   // Acquire stream — try each host until one accepts
   let streamResult: StreamResult | null = null;
   const errors: Error[] = [];
