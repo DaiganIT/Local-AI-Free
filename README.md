@@ -10,6 +10,7 @@ An open-source relay system that lets you chat with local AI models through a we
 ```
 
 - **client/** — React web app (TanStack Router, Vite). Browse hosts, send messages, manage AI agents.
+- **[mobile-app](https://github.com/DaiganIT/Local-AI-Free-Mobile)** — Android/iOS app to connect and use AI agents from your phone.
 - **server/** — Node.js relay (Express + WebSocket). Bridges browser clients and AI hosts.
 - **llm-host/** — Node.js agent that connects to the server, registers itself, and runs AI agents via Ollama.
 
@@ -155,7 +156,6 @@ This project is still very much work in progress — new features and improvemen
 
 **Where it's headed:**
 
-- Mobile app support so you can connect and use your AI agents from your phone
 - Custom workspaces so all agents in a workspace share the same folder
 - Every agent has its own workspace and stores all files locally
 - Simplified setup compared to existing solutions
