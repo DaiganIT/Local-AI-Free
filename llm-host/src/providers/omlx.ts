@@ -38,9 +38,47 @@ function getApiKey(): string {
   return process.env.OMLX_API_KEY ?? "";
 }
 
+type OmlxTextPart = { type: "text"; text: string };
+type OmlxImagePart = { type: "image_url"; image_url: { url: string } };
+type OmlxContentPart = OmlxTextPart | OmlxImagePart;
+
 interface OmlxChatMessage {
   role: string;
-  content?: string;
+  content?: string | OmlxContentPart[];
+}
+
+function buildUserContent(content: string | Array<TextContent | ImageContent>): string | OmlxContentPart[] {
+  if (typeof content === "string") return content;
+
+  const parts: OmlxContentPart[] = [];
+  let hasImages = false;
+
+  for (const block of content) {
+    if (block.type === "text") {
+      if (block.text.length > 0) {
+        parts.push({ type: "text", text: block.text });
+      }
+      continue;
+    }
+
+    if (block.type === "image") {
+      hasImages = true;
+      const mimeType = block.mimeType || "application/octet-stream";
+      parts.push({
+        type: "image_url",
+        image_url: { url: `data:${mimeType};base64,${block.data}` },
+      });
+    }
+  }
+
+  if (!hasImages) {
+    return parts
+      .filter((part): part is OmlxTextPart => part.type === "text")
+      .map((part) => part.text)
+      .join("");
+  }
+
+  return parts;
 }
 
 export function buildOmlxMessages(context: Context): OmlxChatMessage[] {
@@ -50,14 +88,7 @@ export function buildOmlxMessages(context: Context): OmlxChatMessage[] {
   }
   for (const m of context.messages) {
     if (m.role === "user") {
-      const text =
-        typeof m.content === "string"
-          ? m.content
-          : m.content
-              .filter((b): b is TextContent => b.type === "text")
-              .map((b) => b.text)
-              .join("");
-      msgs.push({ role: "user", content: text });
+      msgs.push({ role: "user", content: buildUserContent(m.content) });
     } else if (m.role === "assistant") {
       msgs.push({
         role: "assistant",

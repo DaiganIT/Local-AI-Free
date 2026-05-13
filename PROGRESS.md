@@ -107,3 +107,17 @@ agent-runner.runAgent (dispatch createOllamaModel vs createOpenAIModel)
     ↓
 @pi-ai streamOllama or streamOpenAICompletions → actual LLM API
 ```
+
+## Omlx Vision Support
+
+### Problem
+
+Image attachments are stored correctly and read as ImageContent, but the omlx provider drops image blocks when building the OpenAI-compatible payload, so the model never sees them.
+
+### Slices
+
+| # | Status | Description |
+|---|--------|-------------|
+| **V1** | ✅ DONE | **Add failing tests for `buildOmlxMessages`** — Ensure text+image blocks are serialized into OpenAI `content` arrays with `image_url` data URLs. |
+| **V2** | ✅ DONE | **Implement vision payload support in `buildOmlxMessages`** — Emit mixed content arrays for user messages, keep tool/assistant as text-only. |
+| **V3** | ✅ DONE | **Add `streamSimpleOmlx` request-body test** — Verify the fetch payload includes the `image_url` content blocks. |
