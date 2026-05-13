@@ -5,6 +5,7 @@ import type { WorkspaceChatsDb } from "./workspace-chats-db.js";
 import type { AgentRunInput, AgentRunResult } from "./agent-runner.js";
 import type { RequestTracker } from "./request-tracker.js";
 import type { ProviderLookup } from "./providers/provider-registry.js";
+import type { CronJobsDb } from "./cron-jobs-db.js";
 import { sendResponse } from "./send-response.js";
 import { handleCreateAgent, handleListAgents, handleDeleteAgent, handleListAgentFolder, handleGetAgentInstructions, handleReadAgentFile, handleWriteAgentFile, handleDeleteAgentFile } from "./handlers/agent-handlers.js";
 import { handleCreateChat, handleListChats, handleGetChat, handleDeleteChat } from "./handlers/chat-handlers.js";
@@ -12,7 +13,7 @@ import { handleSendMessage } from "./handlers/send-message.js";
 import { handleCreateWorkspace, handleListWorkspaces, handleGetWorkspace, handleUpdateWorkspace, handleDeleteWorkspace, handleAddAgentToWorkspace, handleRemoveAgentFromWorkspace, handleListWorkspaceAgents, handleListAgentWorkspaces, handleListWorkspaceFolder, handleReadWorkspaceFile, handleWriteWorkspaceFile, handleDeleteWorkspaceFile } from "./handlers/workspace-handlers.js";
 import { handleSendWorkspaceMessage, handleCreateWorkspaceChat, handleListWorkspaceChats, handleGetWorkspaceChat } from "./handlers/workspace-chat-handlers.js";
 import { handleUploadAgentFile, handleUploadWorkspaceFile } from "./handlers/upload-handlers.js";
-
+import { handleCreateCronJob, handleListCronJobs, handleUpdateCronJob, handleDeleteCronJob } from "./handlers/cron-job-handlers.js";
 
 export interface RequestInput {
   action: string;
@@ -28,6 +29,7 @@ export interface RequestInput {
   findProviderForModel?: (modelName: string) => ProviderLookup | undefined;
   agentFolderBasePath?: string;
   tracker?: RequestTracker;
+  cronDb?: CronJobsDb;
 }
 
 export async function handleRequest(input: RequestInput): Promise<void> {
@@ -154,6 +156,24 @@ export async function handleRequest(input: RequestInput): Promise<void> {
 
     case "delete-workspace-file":
       handleDeleteWorkspaceFile(payload, id, send, input.wdb, input.agentFolderBasePath);
+      break;
+
+    // ── Cron-job actions ────────────────────────────────────────────────
+
+    case "create-cron-job":
+      handleCreateCronJob(payload, id, send, input.cronDb);
+      break;
+
+    case "list-cron-jobs":
+      handleListCronJobs(payload, id, send, input.cronDb);
+      break;
+
+    case "update-cron-job":
+      handleUpdateCronJob(payload, id, send, input.cronDb);
+      break;
+
+    case "delete-cron-job":
+      handleDeleteCronJob(payload, id, send, input.cronDb);
       break;
 
     // ── Upload actions ──────────────────────────────────────────────────

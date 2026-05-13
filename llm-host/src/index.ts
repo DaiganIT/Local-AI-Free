@@ -20,6 +20,7 @@ import { createStartup } from "./startup.js";
 import { handleRequest } from "./request-handler.js";
 import { runAgent } from "./agent-runner.js";
 import { createRequestTracker } from "./request-tracker.js";
+import { createCronJobsDatabase } from "./cron-jobs-db.js";
 
 const SERVER_URL = process.env.SERVER_URL ?? "ws://localhost:3000/ws/host";
 const API_KEY = process.env.API_KEY ?? "";
@@ -33,6 +34,7 @@ const db = createDatabase(sqliteDb);
 const chatDb = createChatDatabase(sqliteDb);
 const wdb = createWorkspacesDatabase(sqliteDb);
 const wchatDb = createWorkspaceChatsDatabase(sqliteDb);
+const cronDb = createCronJobsDatabase(sqliteDb);
 const supervisor = createSupervisor(db);
 const tracker = createRequestTracker();
 
@@ -103,6 +105,7 @@ async function connect(): Promise<void> {
           findProviderForModel,
           agentFolderBasePath: process.env.AGENT_FOLDER_BASE_PATH,
           tracker,
+          cronDb,
         }).catch((err) => {
           console.error(`[host] Unhandled error in request handler (${msg.action}):`, err);
         });
